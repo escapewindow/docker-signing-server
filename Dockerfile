@@ -2,32 +2,31 @@
 FROM buildpack-deps
 
 RUN apt-get update \
-        && apt-get install -y curl procps mercurial libevent libevent-dev gnupg
+        && apt-get install -y curl procps gcc gnupg openssl
 
 # signing_test_files
 # signmar
 # include packages::mono
-# include packages::openssl
 # include packages::nss_tools
+# libevent, libevent-dev
 # include packages::jdk17
-# include packages::gcc
 # include packages::make
 # include packages::mozilla::osslsigncode
-#
-# $compiler_req = Class['packages::gcc']
 
 
 # remove several traces of debian python
 RUN apt-get purge -y python python-minimal python2.7-minimal
 
-ADD . /code
+RUN mkdir /code
+COPY py273.tgz /code/
+WORKDIR /
+RUN tar zxvf /code/py273.tgz
 WORKDIR /code/Python-2.7.3
 RUN ./configure \
        && make -j$(nproc) \
-       && make -j$(nproc) EXTRATESTOPTS='--exclude test_file2k' test \
+#       && make -j$(nproc) EXTRATESTOPTS='--exclude test_file2k' test \
        && make install
 
 WORKDIR /code
-RUN hg clone https://hg.mozilla.org/build/tools
 
 CMD ["python2"]
