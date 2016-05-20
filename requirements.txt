@@ -1,0 +1,8 @@
+gevent==0.13.6
+WebOb==1.0.8
+poster==0.8.1
+IPy==0.75
+greenlet==0.3.1
+redis==2.4.5
+flufl.lock==2.2
+pexpect==2.4
