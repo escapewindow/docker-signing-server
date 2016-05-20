@@ -20,4 +20,8 @@ RUN hg clone https://hg.mozilla.org/build/tools
 RUN /tools/python27/bin/python /tools/python27-virtualenv/bin/virtualenv venv
 RUN venv/bin/pip install requests
 
+RUN mkdir /builds/signing
+RUN chown cltsign:cltsign /builds/signing
+RUN chmod 0700 /builds/signing
+
 CMD ["python2"]
