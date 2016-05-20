@@ -1,32 +1,20 @@
-# Based on https://github.com/docker-library/python/commit/9d2859cc4bd5c228cccfac2d0b515b83da93bbf2
-FROM buildpack-deps
+FROM centos:centos6
 
-RUN apt-get update \
-        && apt-get install -y curl procps gcc gnupg openssl libevent-2.0-5 libevent-dev openjdk-7-jdk mono-complete
-
-# signing_test_files
-# signmar
-# include packages::nss_tools
-# include packages::mozilla::osslsigncode
-
-
-# remove several traces of debian python
-RUN apt-get purge -y python python-minimal python2.7-minimal
+RUN yum -y update \
+        && yum -y install curl gcc gnupg openssl libevent libevent-devel java-1.6.0-openjdk-devel mono-core mono-devel nss-tools wget mercurial tcl-devel tk-devel
 
 RUN mkdir /code
-COPY py273.tgz /code/
-COPY tools.tgz /code/
-WORKDIR /
-RUN tar zxvf /code/py273.tgz
-WORKDIR /code/Python-2.7.3
-RUN ./configure \
-       && make -j$(nproc) \
-#       && make -j$(nproc) EXTRATESTOPTS='--exclude test_file2k' test \
-       && make install
-
-RUN easy_install pip
+WORKDIR /code
+RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/releng/public/CentOS/6/x86_64/signmar-19.0-2.el6.x86_64.rpm
+RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/custom/osslsigncode/x86_64/osslsigncode-1.7.1-1.el6.x86_64.rpm
+RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/releng/public/CentOS/6/x86_64/mozilla-python27-2.7.3-1.el6.x86_64.rpm
+RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/releng/public/CentOS/6/x86_64/mozilla-python27-virtualenv-1.7.1.2-2.el6.x86_64.rpm
+RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/releng/public/CentOS/6/noarch/mozilla-signing-test-files-1.2-1.noarch.rpm
+RUN rpm -i --force *.rpm
 
 WORKDIR /code
-RUN tar zxvf tools.tgz
+RUN hg clone https://hg.mozilla.org/build/tools
+RUN /tools/python27/bin/python /tools/python27-virtualenv/bin/virtualenv venv
+RUN venv/bin/pip install requests
 
 CMD ["python2"]
