@@ -18,7 +18,8 @@ RUN yum -y update && yum -y install \
     tk-devel \
     wget
 
-RUN useradd -d /home/cltsign -s /bin/bash -m cltsign
+RUN useradd -d /home/dockersign -s /bin/bash -m dockersign
+
 RUN mkdir /rpms
 WORKDIR /rpms
 RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/releng/public/CentOS/6/x86_64/signmar-19.0-2.el6.x86_64.rpm
@@ -36,9 +37,19 @@ RUN signing1/bin/pip install -r requirements.txt
 
 WORKDIR /builds/signing/signing1
 RUN hg clone -r SIGNING_SERVER https://hg.mozilla.org/build/tools
-RUN mkdir -p /builds/signing/signed-files /builds/signing/unsigned-files /builds/signing/signing1/secrets
+RUN mkdir -p /builds/signing/signed-files /builds/signing/unsigned-files /builds/signing/signing1/secrets/gpg
+COPY *.ini /builds/signing/signing1/
+COPY run.sh /builds/signing/signing1/
+COPY gpg/* /builds/signing/signing1/secrets/gpg/
 
-RUN chown cltsign:cltsign /builds/signing
+RUN chown -R dockersign:dockersign /builds/signing
 RUN chmod 0700 /builds/signing
 
-#CMD ["python2"]
+WORKDIR /builds/signing/signing1
+
+ENV           HOME          /home/dockersign
+ENV           SHELL         /bin/bash
+ENV           USER          dockersign
+ENV           LOGNAME       dockersign
+
+CMD ["/builds/signing/signing1/run.sh"]
