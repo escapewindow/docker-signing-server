@@ -1,5 +1,6 @@
 # Based on build-puppet 649f99991f467d1769e08a23dba7e24aac4fee39
 FROM centos:centos6
+MAINTAINER Aki Sasaki <aki@mozilla.com>
 
 RUN yum -y update && yum -y install \
     curl \
@@ -16,7 +17,8 @@ RUN yum -y update && yum -y install \
     openssl \
     tcl-devel \
     tk-devel \
-    wget
+    wget \\
+    && yum -y clean all
 
 RUN useradd -d /home/dockersign -s /bin/bash -m dockersign
 
@@ -51,5 +53,7 @@ ENV           HOME          /home/dockersign
 ENV           SHELL         /bin/bash
 ENV           USER          dockersign
 ENV           LOGNAME       dockersign
+
+EXPOSE 9110
 
 CMD ["/builds/signing/signing1/run.sh"]
