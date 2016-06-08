@@ -14,13 +14,10 @@ from signing.client import get_token
 o = urlparse(os.environ['DOCKER_HOST'])
 print(o.hostname)
 
-#a = get_token("https://{}:9110".format(o.hostname), "new_token_auth", "token_secret", "127.0.0.1", 3600)
-#print(a)
-
 username = "new_token_auth"
 password = "token_secret"
 baseurl = "https://{}:9110".format(o.hostname)
-auth = base64.encodestring('%s:%s' % (username, password)).rstrip('\n')
+auth = base64.encodestring('user:pass').rstrip('\n')
 url = '%s/token' % baseurl
 data = urllib.urlencode({
     'slave_ip': "127.0.0.1",
@@ -30,9 +27,8 @@ headers = {
     'Authorization': 'Basic %s' % auth,
     'Content-Length': str(len(data)),
 }
-r = requests.get(url, auth=(username, password), data=data, headers=headers,
-                 verify=False)
+r = requests.post(url, data=data, headers=headers, verify=False)
 print(r.status_code)
+print(r.reason)
 print(r.text)
-#r = urllib2.Request(url, data, headers)
-#return urllib2.urlopen(r).read()
+print(dir(r))
