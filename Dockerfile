@@ -42,6 +42,7 @@ RUN hg clone -r SIGNING_SERVER https://hg.mozilla.org/build/tools
 RUN mkdir -p /builds/signing/signed-files /builds/signing/unsigned-files /builds/signing/signing1/secrets/gpg
 COPY *.ini /builds/signing/signing1/
 COPY run.sh /builds/signing/signing1/
+COPY host.* /builds/signing/signing1/
 COPY gpg/* /builds/signing/signing1/secrets/gpg/
 
 RUN chown -R dockersign:dockersign /builds/signing
