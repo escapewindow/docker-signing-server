@@ -20,8 +20,8 @@ baseurl = "https://{}:9110".format(o.hostname)
 auth = base64.encodestring('user:pass').rstrip('\n')
 url = '%s/token' % baseurl
 data = urllib.urlencode({
-    'slave_ip': "127.0.0.1",
-    'duration': 3600,
+    'slave_ip': "0/0",
+    'duration': 600,
 })
 headers = {
     'Authorization': 'Basic %s' % auth,
