@@ -8,3 +8,4 @@ sign.py
 token
 nonce
 *.sig
+test.mar
