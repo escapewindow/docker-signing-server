@@ -1,3 +1,10 @@
 .git
+.gitignore
+
 TODO
-README
+README.md
+
+sign.py
+token
+nonce
+*.sig

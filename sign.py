@@ -14,8 +14,6 @@ from signing.client import get_token
 o = urlparse(os.environ['DOCKER_HOST'])
 print(o.hostname)
 
-username = "new_token_auth"
-password = "token_secret"
 baseurl = "https://{}:9110".format(o.hostname)
 auth = base64.encodestring('user:pass').rstrip('\n')
 url = '%s/token' % baseurl
@@ -31,4 +29,9 @@ r = requests.post(url, data=data, headers=headers, verify=False)
 print(r.status_code)
 print(r.reason)
 print(r.text)
-print(dir(r))
+token = r.text
+with open("token", "w") as fh:
+    print(token, file=fh, end="")
+
+baseurl = "https://{}:9110".format(o.hostname)
+url = '%s/sign' % baseurl
