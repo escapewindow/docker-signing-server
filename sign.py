@@ -1,12 +1,21 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import base64
+import logging
 import os
+from poster.encode import multipart_encode
 import sys
 import urllib
 import urllib2
 import requests
 from urlparse import urlparse
+
+log = logging.getLogger()
+
+log.setLevel(logging.DEBUG)
+if len(log.handlers) == 0:
+    log.addHandler(logging.StreamHandler())
+log.addHandler(logging.NullHandler())
 
 sys.path.insert(0, "/src/tools/lib/python")
 from signing.client import get_token
@@ -38,22 +47,35 @@ print(r.status_code)
 print(r.reason)
 print(r.text)
 token = r.text
+with open("token", "w") as fh:
+    print(token, file=fh, end="")
 
 print("SIGNING")
 
 baseurl = "https://{}:9110".format(o.hostname)
-url = '%s/sign/gpg' % baseurl
+sha1 = sha1sum(file_to_sign)
+nonce = ""
+import ssl
+
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+
 data = {
     'token': token,
-    'sha1': sha1sum(file_to_sign),
+    'sha1': sha1,
     'filename': file_to_sign,
+    'nonce': nonce,
 }
-headers = {
-    'Content-Length': str(len(data)),
-}
-with open(file_to_sign, "rb") as fh:
-    data['filedata'] = fh
-    r = requests.post(url, data=data, headers=headers, verify=False)
+url = '{}/sign/gpg/{}'.format(baseurl, sha1)
+files = {'filedata': open(file_to_sign, 'rb')}
+r = requests.post(url, data=data, files=files, verify=False)
+#    r = urllib2.Request(url, datagen, headers)
+#    req = urllib2.urlopen(r)
+#print(req.info()['X-Nonce'])
+#with open("nonce", "wb") as fh:
+#    print(req.info()['X-Nonce'], file=fh, end="")
+#    print(dir(req))
 print(r.status_code)
 print(r.reason)
 print(r.text)

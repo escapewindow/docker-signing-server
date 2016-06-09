@@ -5,6 +5,7 @@ TODO
 README.md
 
 sign.py
+sign.sh
 token
 nonce
 *.sig
