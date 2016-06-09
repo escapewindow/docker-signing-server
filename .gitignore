@@ -1,2 +1,4 @@
 *.swp
 token
+nonce
+*.sig

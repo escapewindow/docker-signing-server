@@ -52,7 +52,6 @@ with open("token", "w") as fh:
 
 print("SIGNING")
 
-baseurl = "https://{}:9110".format(o.hostname)
 sha1 = sha1sum(file_to_sign)
 nonce = ""
 import ssl
@@ -79,3 +78,12 @@ r = requests.post(url, data=data, files=files, verify=False)
 print(r.status_code)
 print(r.reason)
 print(r.text)
+
+# get signature
+url = '{}/sign/gpg/{}'.format(baseurl, sha1)
+r = requests.get(url, verify=False)
+print(r.status_code)
+print(r.reason)
+print(r.text)
+with open("{}.sig".format(file_to_sign), "wb") as fh:
+    print(r.text, file=fh, end="")
