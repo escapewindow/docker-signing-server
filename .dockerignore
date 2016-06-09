@@ -6,6 +6,9 @@ README.md
 
 sign.py
 gpg.sh
+ssl.sh
+ssl
+
 token
 nonce
 *.sig

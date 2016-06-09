@@ -2,3 +2,5 @@
 token
 nonce
 *.sig
+ssl
+host.*
