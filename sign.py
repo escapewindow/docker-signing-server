@@ -42,7 +42,7 @@ headers = {
     'Authorization': 'Basic %s' % auth,
     'Content-Length': str(len(data)),
 }
-r = requests.post(url, data=data, headers=headers, verify=False)
+r = requests.post(url, data=data, headers=headers, verify='ssl/cert.pem')
 print(r.status_code)
 print(r.reason)
 print(r.text)
@@ -68,7 +68,7 @@ data = {
 }
 url = '{}/sign/gpg/{}'.format(baseurl, sha1)
 files = {'filedata': open(file_to_sign, 'rb')}
-r = requests.post(url, data=data, files=files, verify=False)
+r = requests.post(url, data=data, files=files, verify='ssl/cert.pem')
 #    r = urllib2.Request(url, datagen, headers)
 #    req = urllib2.urlopen(r)
 #print(req.info()['X-Nonce'])
@@ -81,7 +81,7 @@ print(r.text)
 
 # get signature
 url = '{}/sign/gpg/{}'.format(baseurl, sha1)
-r = requests.get(url, verify=False)
+r = requests.get(url, verify='ssl/cert.pem')
 print(r.status_code)
 print(r.reason)
 print(r.text)
