@@ -54,11 +54,6 @@ print("SIGNING")
 
 sha1 = sha1sum(file_to_sign)
 nonce = ""
-import ssl
-
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode = ssl.CERT_NONE
 
 data = {
     'token': token,
@@ -69,12 +64,6 @@ data = {
 url = '{}/sign/gpg/{}'.format(baseurl, sha1)
 files = {'filedata': open(file_to_sign, 'rb')}
 r = requests.post(url, data=data, files=files, verify='host.cert')
-#    r = urllib2.Request(url, datagen, headers)
-#    req = urllib2.urlopen(r)
-#print(req.info()['X-Nonce'])
-#with open("nonce", "wb") as fh:
-#    print(req.info()['X-Nonce'], file=fh, end="")
-#    print(dir(req))
 print(r.status_code)
 print(r.reason)
 print(r.text)

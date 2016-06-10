@@ -22,7 +22,7 @@ openssl req \
     -days 365 \
     -nodes \
     -x509 \
-    -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=$DOCKER_IP/subjectAltName=$DOCKER_IP" \
+    -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=$DOCKER_IP/subjectAltName=DNS:$DOCKER_IP" \
     -reqexts SAN \
     -config myssl.cnf \
     -keyout docker.key \
