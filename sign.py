@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# TODO rewrite to use new docker stuff, stop using urllib/poster and use requests
 from __future__ import print_function
 import base64
 import logging
