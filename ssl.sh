@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 mkdir -p ssl
-DOCKER_IP=`echo $DOCKER_HOST | sed -e 's,.*://\([^:]*\):.*,\1,'`
+DOCKER_IP=127.0.0.1
 cd ssl
 if [ -f myssl.cnf ] ; then
     rm -f myssl.cnf
