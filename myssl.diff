@@ -1,0 +1,82 @@
+--- /usr/local/etc/openssl/openssl.cnf	2016-05-16 10:25:44.000000000 -0700
++++ myssl.cnf.tmpl	2016-07-28 13:30:16.000000000 -0700
+@@ -1,9 +1,11 @@
++# TO GENERATE THIS FILE, follow http://stackoverflow.com/a/21494483
++# and https://github.com/coreos/etcd/issues/209#issuecomment-25945639
+ #
+ # OpenSSL example configuration file.
+ # This is mostly being used for generation of certificate requests.
+ #
+ 
+ # This definition stops the following lines choking if HOME isn't
+ # defined.
+ HOME			= .
+ RANDFILE		= $ENV::HOME/.rnd
+@@ -57,19 +59,19 @@
+ 
+ x509_extensions	= usr_cert		# The extentions to add to the cert
+ 
+ # Comment out the following two lines for the "traditional"
+ # (and highly broken) format.
+ name_opt 	= ca_default		# Subject Name options
+ cert_opt 	= ca_default		# Certificate field options
+ 
+ # Extension copying option: use with caution.
+-# copy_extensions = copy
++copy_extensions = copy
+ 
+ # Extensions to add to a CRL. Note: Netscape communicator chokes on V2 CRLs
+ # so this is commented out by default to leave a V1 CRL.
+ # crlnumber must also be commented out to leave a V1 CRL.
+ # crl_extensions	= crl_ext
+ 
+ default_days	= 365			# how long to certify for
+ default_crl_days= 30			# how long before next CRL
+ default_md	= default		# use public key default MD
+@@ -236,25 +238,25 @@
+ # This is what PKIX recommends but some broken software chokes on critical
+ # extensions.
+ #basicConstraints = critical,CA:true
+ # So we do this instead.
+ basicConstraints = CA:true
+ 
+ # Key usage: this is typical for a CA certificate. However since it will
+ # prevent it being used as an test self-signed certificate it is best
+ # left out by default.
+-# keyUsage = cRLSign, keyCertSign
++keyUsage = digitalSignature, keyEncipherment
+ 
+ # Some might want this also
+ # nsCertType = sslCA, emailCA
+ 
+ # Include email address in subject alt name: another PKIX recommendation
+-# subjectAltName=email:copy
++subjectAltName = @alternate_names
+ # Copy issuer details
+ # issuerAltName=issuer:copy
+ 
+ # DER hex encoding of an extension: beware experts only!
+ # obj=DER:02:03
+ # Where 'obj' is a standard or added object
+ # You can even override a supported extension:
+ # basicConstraints= critical, DER:30:03:01:01:FF
+ 
+@@ -342,9 +344,18 @@
+ digests		= md5, sha1		# Acceptable message digests (mandatory)
+ accuracy	= secs:1, millisecs:500, microsecs:100	# (optional)
+ clock_precision_digits  = 0	# number of digits after dot. (optional)
+ ordering		= yes	# Is ordering defined for timestamps?
+ 				# (optional, default: no)
+ tsa_name		= yes	# Must the TSA name be included in the reply?
+ 				# (optional, default: no)
+ ess_cert_id_chain	= no	# Must the ESS cert id chain be included?
+ 				# (optional, default: no)
++
++[ ssl_client ]
++  basicConstraints = CA:FALSE
++  nsCertType = client
++  keyUsage = digitalSignature, keyEncipherment
++  extendedKeyUsage = clientAuth
++  nsComment = "OpenSSL Certificate for SSL Client"
++
++[ alternate_names ]
