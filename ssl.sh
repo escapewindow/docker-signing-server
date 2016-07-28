@@ -19,15 +19,15 @@ printf "IP.1 = 127.0.0.1\nIP.2 = 172.17.0.2\nDNS.1 = localhost\nDNS.2 = localhos
 #openssl rsa -in privkey.pem -out key.pem; openssl x509 -in cert.csr -out cert.pem -req -signkey key.pem -days 1001; cat key.pem>>cert.pem
 #cp key.pem ../host.key; cp cert.pem ../host.cert
 #
+rm -f host.key host.cert docker.cert
 openssl genrsa -out host.key 3072
 openssl req -new \
-    -config myssl.cnf \
     -x509 \
+    -config myssl.cnf \
     -key host.key \
-    -extensions ssl_client \
     -sha256 \
     -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=localhost" \
-    -out docker.cert \
+    -out host.cert \
     -days 730
 
 cp host.cert docker.cert

@@ -47,7 +47,6 @@ COPY gpg/* /builds/signing/signing1/secrets/gpg/
 
 RUN chown -R dockersign:dockersign /builds/signing
 RUN chmod 0700 /builds/signing
-RUN hostname localhost.localdomain
 
 WORKDIR /builds/signing/signing1
 
@@ -58,4 +57,4 @@ ENV           LOGNAME       dockersign
 
 EXPOSE 9110
 
-CMD ["/builds/signing/signing1/run.sh"]
+CMD ["sh", "/builds/signing/signing1/run.sh"]

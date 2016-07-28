@@ -1,5 +1,4 @@
-# TO GENERATE THIS FILE, follow http://stackoverflow.com/a/21494483
-# and https://github.com/coreos/etcd/issues/209#issuecomment-25945639
+# Modified per http://stackoverflow.com/a/21494483
 #
 # OpenSSL example configuration file.
 # This is mostly being used for generation of certificate requests.
@@ -224,7 +223,7 @@ basicConstraints = CA:FALSE
 keyUsage = nonRepudiation, digitalSignature, keyEncipherment
 
 [ v3_ca ]
-
+subjectAltName      = @alternate_names
 
 # Extensions for a typical CA
 
@@ -244,13 +243,13 @@ basicConstraints = CA:true
 # Key usage: this is typical for a CA certificate. However since it will
 # prevent it being used as an test self-signed certificate it is best
 # left out by default.
-keyUsage = digitalSignature, keyEncipherment
+# keyUsage = cRLSign, keyCertSign
 
 # Some might want this also
 # nsCertType = sslCA, emailCA
 
 # Include email address in subject alt name: another PKIX recommendation
-subjectAltName = @alternate_names
+# subjectAltName=email:copy
 # Copy issuer details
 # issuerAltName=issuer:copy
 
@@ -350,12 +349,5 @@ tsa_name		= yes	# Must the TSA name be included in the reply?
 				# (optional, default: no)
 ess_cert_id_chain	= no	# Must the ESS cert id chain be included?
 				# (optional, default: no)
-
-[ ssl_client ]
-  basicConstraints = CA:FALSE
-  nsCertType = client
-  keyUsage = digitalSignature, keyEncipherment
-  extendedKeyUsage = clientAuth
-  nsComment = "OpenSSL Certificate for SSL Client"
 
 [ alternate_names ]
