@@ -223,7 +223,7 @@ basicConstraints = CA:FALSE
 keyUsage = nonRepudiation, digitalSignature, keyEncipherment
 
 [ v3_ca ]
-subjectAltName      = @alternate_names
+subjectAltName      = $ENV::ALTNAME
 
 # Extensions for a typical CA
 
@@ -349,5 +349,3 @@ tsa_name		= yes	# Must the TSA name be included in the reply?
 				# (optional, default: no)
 ess_cert_id_chain	= no	# Must the ESS cert id chain be included?
 				# (optional, default: no)
-
-[ alternate_names ]

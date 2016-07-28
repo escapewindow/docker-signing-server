@@ -1,5 +1,5 @@
 --- /usr/local/etc/openssl/openssl.cnf	2016-05-16 10:25:44.000000000 -0700
-+++ myssl.cnf.tmpl	2016-07-28 15:57:54.000000000 -0700
++++ myssl.cnf	2016-07-28 16:02:12.000000000 -0700
 @@ -1,9 +1,10 @@
 +# Modified per http://stackoverflow.com/a/21494483
  #
@@ -43,7 +43,7 @@
  
  [ v3_ca ]
 -
-+subjectAltName      = @alternate_names
++subjectAltName      = $ENV::ALTNAME
  
  # Extensions for a typical CA
  
@@ -53,22 +53,3 @@
  subjectKeyIdentifier=hash
  
  authorityKeyIdentifier=keyid:always,issuer
-@@ -342,9 +343,18 @@
- digests		= md5, sha1		# Acceptable message digests (mandatory)
- accuracy	= secs:1, millisecs:500, microsecs:100	# (optional)
- clock_precision_digits  = 0	# number of digits after dot. (optional)
- ordering		= yes	# Is ordering defined for timestamps?
- 				# (optional, default: no)
- tsa_name		= yes	# Must the TSA name be included in the reply?
- 				# (optional, default: no)
- ess_cert_id_chain	= no	# Must the ESS cert id chain be included?
- 				# (optional, default: no)
-+
-+[ alternate_names ]
-+
-+DNS.1        = localhost
-+DNS.2        = localhost.localdomain
-+DNS.2        = akimoz
-+
-+IP.1         = 127.0.0.1
-+IP.2         = 172.17.0.2
