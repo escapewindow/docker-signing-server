@@ -17,4 +17,4 @@ docker build -t signingserver .; docker run -i -p 9110:9110 signingserver bash -
 ### ./sign.py
 # you should be able to sign against this server using 127.0.0.1:9110
 # verify the signature
-./gpg.sh --verify test.mar.sig
+./gpg.sh --verify SIGNED_FILE
