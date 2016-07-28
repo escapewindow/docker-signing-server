@@ -5,3 +5,4 @@ nonce
 *.asc
 ssl
 host.*
+*.cert
