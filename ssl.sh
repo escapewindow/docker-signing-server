@@ -5,7 +5,7 @@ if [ -f myssl.cnf ] ; then
     rm -f myssl.cnf
 fi
 cp ../myssl.cnf.tmpl myssl.cnf
-printf "DNS.1 = 127.0.0.1\nDNS.2 = localhost\nDNS.3 = localhost.localdomain" >> myssl.cnf
+printf "IP.1 = 127.0.0.1\nIP.2 = 172.17.0.2\nDNS.1 = localhost\nDNS.2 = localhost.localdomain" >> myssl.cnf
 #openssl req \
 #    -new \
 #    -newkey rsa:4096 \
@@ -26,7 +26,7 @@ openssl req -new \
     -key host.key \
     -extensions ssl_client \
     -sha256 \
-    -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=127.0.0.1" \
+    -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=localhost" \
     -out docker.cert \
     -days 730
 

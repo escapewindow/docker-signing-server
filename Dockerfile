@@ -47,6 +47,7 @@ COPY gpg/* /builds/signing/signing1/secrets/gpg/
 
 RUN chown -R dockersign:dockersign /builds/signing
 RUN chmod 0700 /builds/signing
+RUN hostname localhost.localdomain
 
 WORKDIR /builds/signing/signing1
 
