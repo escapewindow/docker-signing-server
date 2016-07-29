@@ -27,5 +27,5 @@ openssl req -new \
     -days 730
 
 cp host.cert docker.cert
-cat host.key >> host.cert
+#cat host.key >> host.cert
 cp host.key host.cert docker.cert ../
