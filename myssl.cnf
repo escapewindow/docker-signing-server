@@ -1,4 +1,5 @@
 # Modified per http://stackoverflow.com/a/21494483
+[default]
 #
 # OpenSSL example configuration file.
 # This is mostly being used for generation of certificate requests.

@@ -3,6 +3,10 @@ token
 nonce
 *.sig
 *.asc
-ssl
-host.*
+
+# ssl
 *.cert
+*.crt
+*.csr
+*.key
+*.srl
