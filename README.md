@@ -17,8 +17,7 @@ docker build -t signingserver .; docker run -i -p 9110:9110 signingserver bash -
 # In a separate terminal, figure out how to set `my_ip`:
 docker network inspect bridge
 # You probably want to set `my_ip` to the subnet, but .1, e.g. 172.17.0.1
-### THIS IS BROKEN - in a separate terminal, run sign.py
-### ./sign.py
 # you should be able to sign against this server using 127.0.0.1:9110
+# see github.com/escapewindow/signingscript
 # verify the signature
 ./gpg.sh --verify SIGNED_FILE
