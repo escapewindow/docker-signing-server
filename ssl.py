@@ -73,10 +73,10 @@ def run_cmd(cmd):
 
 def build_altname(fqdns, ips):
     altname = []
-    for num, val in enumerate(ips or [], start=1):
-        altname.append("IP.%d:%s" % (num, val))
     for num, val in enumerate(fqdns, start=1):
         altname.append("DNS.%d:%s" % (num, val))
+    for num, val in enumerate(ips or [], start=1):
+        altname.append("IP.%d:%s" % (num, val))
     return ','.join(altname)
 
 
