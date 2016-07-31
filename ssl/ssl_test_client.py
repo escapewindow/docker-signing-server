@@ -10,7 +10,7 @@ import requests
 import ssl
 
 URL = "https://localhost:8080/?foo=bar"
-SSL_CERT = "docker.cert"
+SSL_CERT = "localhost.cert"
 ssl_context = ssl.create_default_context(cafile=SSL_CERT)
 
 def req():

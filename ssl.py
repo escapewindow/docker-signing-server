@@ -72,6 +72,7 @@ def run_cmd(cmd):
 
 def build_altname(fqdns, ips):
     altname = []
+    ips = ips or []
     for num, val in enumerate(fqdns, start=1):
         altname.append("DNS.%d:%s" % (num, val))
     for num, val in enumerate(ips, start=1):
@@ -82,18 +83,18 @@ def build_altname(fqdns, ips):
 def generate_keys(options):
     """Generate the key and cert.
     """
-    hostname = options.dns[0]
+    hostname = options.fqdn[0]
     key = os.path.join(SSL_DIR, "%s.key" % hostname)
     cert = os.path.join(SSL_DIR, "%s.cert" % hostname)
     os.environ['ALTNAME'] = build_altname(options.fqdn, options.ips)
-    print("Using ALTNAME of %s ..." % os.environ['ALTNAME'])
+    print("Using ALTNAME of '%s' ..." % os.environ['ALTNAME'])
     for path in (key, cert):
         if os.path.exists(path):
             os.remove(path)
     repl_dict = {
         'fqdn': hostname,
     }
-    run_cmd(["openssl", "genrsa", "-out", key, str(options.days)])
+    run_cmd(["openssl", "genrsa", "-out", key, "3072"])
     run_cmd([
         "openssl", "req",
         "-new",
@@ -136,7 +137,7 @@ def main(name=None):
     )
     with open(options.newconf, 'w') as fh:
         ssl_conf.write(fh)
-    key, cert = generate_keys()
+    key, cert = generate_keys(options)
     print("Private key is at %s.  Public cert is at %s." % (key, cert))
     print("You can inspect the cert via `openssl x509 -text -noout -in %s`"
           % cert)
