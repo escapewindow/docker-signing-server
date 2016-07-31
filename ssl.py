@@ -23,7 +23,7 @@ SSL_CONFIG_PATHS = (
     "/etc/ssl/openssl.cnf",
     "/usr/lib/ssl/openssl.cnf",
 )
-SSL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'ssl')
+SSL_DIR = os.path.join(os.path.dirname(__file__), 'ssl')
 DEFAULT_SUBJECT = "/C=US/ST=CA/L=San Francisco/O=Mozilla/CN=%(fqdn)s"
 
 

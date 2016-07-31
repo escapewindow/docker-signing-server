@@ -11,4 +11,5 @@ ssl*
 token
 nonce
 *.sig
+*.log
 test.mar

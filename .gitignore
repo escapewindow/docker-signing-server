@@ -3,6 +3,7 @@ token
 nonce
 *.sig
 *.asc
+*.log
 
 # ssl
 *.cert
