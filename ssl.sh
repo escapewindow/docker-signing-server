@@ -1,7 +1,7 @@
 #!/bin/sh -ex
 mkdir -p ssl
 cd ssl
-export ALTNAME="IP.1:127.0.0.1,IP.2:172.17.0.2,DNS.1:localhost,DNS.2:localhost.localdomain"
+export ALTNAME="IP.1:127.0.0.1,DNS.1:localhost,DNS.2:localhost.localdomain"
 #openssl req \
 #    -new \
 #    -newkey rsa:4096 \

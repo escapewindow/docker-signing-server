@@ -66,17 +66,17 @@ def read_orig_ssl_conf(path, search_paths):
 def run_cmd(cmd):
     """Run a command.
     """
-    print("Running %s..." % cmd)
+    print("Running %s ..." % cmd)
+    print("Copy/paste: %s" % subprocess.list2cmdline(cmd))
     subprocess.check_call(cmd)
 
 
 def build_altname(fqdns, ips):
     altname = []
-    ips = ips or []
+    for num, val in enumerate(ips or [], start=1):
+        altname.append("IP.%d:%s" % (num, val))
     for num, val in enumerate(fqdns, start=1):
         altname.append("DNS.%d:%s" % (num, val))
-    for num, val in enumerate(ips, start=1):
-        altname.append("IP.%d:%s" % (num, val))
     return ','.join(altname)
 
 
