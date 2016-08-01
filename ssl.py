@@ -178,6 +178,7 @@ def main(name=None):
         print("--ca-cert and --ca-key must be specified together!",
               file=sys.stderr)
         sys.exit(1)
+    # We need a non-ALTNAME ssl conf to generate a CA.
     ca_ssl_conf = generate_new_ssl_conf(
         options,
         read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS),
