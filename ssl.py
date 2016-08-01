@@ -58,8 +58,9 @@ def generate_new_ssl_conf(options, orig_config_string, ca=False):
 
     # The section names barf without the spaces =\
     # Changes for subjectAltName:
-    config.set(' CA_default ', 'copy_extensions', r'copy')
-    config.set(' v3_ca ', 'subjectAltName', r'$ENV::ALTNAME')
+    if not ca:
+        config.set(' CA_default ', 'copy_extensions', r'copy')
+        config.set(' v3_ca ', 'subjectAltName', r'$ENV::ALTNAME')
     # Changes for our own CA (http://stackoverflow.com/a/7770075):
     config.set(' CA_default ', 'dir', options.ca_dir)
     config.set(' CA_default ', 'certs', '$dir')
@@ -74,14 +75,6 @@ def generate_new_ssl_conf(options, orig_config_string, ca=False):
     config.set(' CA_default ', 'default_md', 'md5')
     config.set(' CA_default ', 'preserve', 'no')
     config.set(' CA_default ', 'policy', 'policy_anything')
-    # config.add_section(' generic_policy ')
-    # config.set(' generic_policy ', 'countryName', 'optional')
-    # config.set(' generic_policy ', 'stateOrProvinceName', 'optional')
-    # config.set(' generic_policy ', 'localityName', 'optional')
-    # config.set(' generic_policy ', 'organizationName', 'optional')
-    # config.set(' generic_policy ', 'organizationalUnitName', 'optional')
-    # config.set(' generic_policy ', 'commonName', 'supplied')
-    # config.set(' generic_policy ', 'emailAddress', 'optional')
     return config
 
 
@@ -185,6 +178,13 @@ def main(name=None):
         print("--ca-cert and --ca-key must be specified together!",
               file=sys.stderr)
         sys.exit(1)
+    ca_ssl_conf = generate_new_ssl_conf(
+        options,
+        read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS),
+        ca=True
+    )
+    with open(options.new_ca_conf, 'w') as fh:
+        ca_ssl_conf.write(fh)
     ssl_conf = generate_new_ssl_conf(
         options,
         read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS)

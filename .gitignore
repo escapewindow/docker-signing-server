@@ -4,7 +4,7 @@ nonce
 *.sig
 *.asc
 *.log
-CA
+CA/
 
 # ssl
 *.cert
