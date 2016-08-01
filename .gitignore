@@ -4,6 +4,7 @@ nonce
 *.sig
 *.asc
 *.log
+CA
 
 # ssl
 *.cert
@@ -13,5 +14,3 @@ nonce
 *.srl
 *.old
 *.pem
-ca.db.index
-ca.db.serial
