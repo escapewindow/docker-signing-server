@@ -151,25 +151,6 @@ def generate_keys(options):
     return key, cert
 
 
-def create_ca_files(options):
-    top_dir = options.ca_dir
-    certs_dir = os.path.join(top_dir, "ca.db.certs")
-    if not os.path.exists(certs_dir):
-        os.makedirs(os.path.join(top_dir, "ca.db.certs"))
-    index = os.path.join(top_dir, "ca.db.index")
-    attr = os.path.join(top_dir, "ca.db.index.attr")
-    serial = os.path.join(top_dir, "ca.db.index.attr")
-    if not os.path.exists(index):
-        with open(index, "w") as fh:
-            print("01", file=fh)
-    if not os.path.exists(attr):
-        with open(attr, "w") as fh:
-            print("unique_subject = no", file=fh)
-    if not os.path.exists(serial):
-        with open(serial, "w") as fh:
-            print("01", file=fh)
-
-
 def parse_args(args):
     parser = argparse.ArgumentParser(
         description='Generate self-signed SSL cert for a host.'
@@ -204,20 +185,12 @@ def main(name=None):
         print("--ca-cert and --ca-key must be specified together!",
               file=sys.stderr)
         sys.exit(1)
-#    ca_ssl_conf = generate_new_ssl_conf(
-#        options,
-#        read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS),
-#        ca=True
-#    )
-#    with open(options.new_ca_conf, 'w') as fh:
-#        ca_ssl_conf.write(fh)
     ssl_conf = generate_new_ssl_conf(
         options,
         read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS)
     )
     with open(options.newconf, 'w') as fh:
         ssl_conf.write(fh)
-    create_ca_files(options)
     key, cert = generate_keys(options)
     print("Private key is at %s.  Public cert is at %s." % (key, cert))
     print("You can inspect the cert via `openssl x509 -text -noout -in %s`"
