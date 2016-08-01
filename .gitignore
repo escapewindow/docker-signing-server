@@ -11,3 +11,7 @@ nonce
 *.csr
 *.key
 *.srl
+*.old
+*.pem
+ca.db.index
+ca.db.serial

@@ -5,17 +5,27 @@ This will contain a CommonName and subjectAltName for newer python ssl
 verification.
 
 This requires openssl installed locally.
+
+Based off of:
+* http://stackoverflow.com/a/21494483
+* https://gist.github.com/toolness/3073310
+* https://gist.github.com/irazasyed/15885b27963d146061d7
+* http://stackoverflow.com/a/7770075
 """
 from __future__ import print_function
 import argparse
+import datetime
+import hashlib
 import os
 import subprocess
 import sys
 
 if sys.version_info[0] == 2:
     from ConfigParser import RawConfigParser
+    PYTHON2 = True
 else:
     from configparser import RawConfigParser
+    PYTHON2 = False
 
 SSL_CONFIG_PATHS = (
     "/usr/local/etc/openssl/openssl.cnf",
@@ -24,10 +34,12 @@ SSL_CONFIG_PATHS = (
     "/usr/lib/ssl/openssl.cnf",
 )
 SSL_DIR = os.path.join(os.path.dirname(__file__), 'ssl')
-DEFAULT_SUBJECT = "/C=US/ST=CA/L=San Francisco/O=Mozilla/CN=%(fqdn)s"
+DEFAULT_SUBJECT = os.environ.get(
+    "SSL_SUBJECT", "/C=US/ST=CA/L=San Francisco/O=Moco Releng/CN=%(fqdn)s"
+)
 
 
-def generate_new_ssl_conf(orig_config_string):
+def generate_new_ssl_conf(options, orig_config_string, ca=False):
     """Take the original openssl.conf contents, make it readable to
     RawConfigParser, then edit it to allow for self-signed subjectAltName
     support per http://stackoverflow.com/a/21494483 .
@@ -45,8 +57,31 @@ def generate_new_ssl_conf(orig_config_string):
     # print(config.sections())
 
     # The section names barf without the spaces =\
+    # Changes for subjectAltName:
     config.set(' CA_default ', 'copy_extensions', r'copy')
     config.set(' v3_ca ', 'subjectAltName', r'$ENV::ALTNAME')
+    # Changes for our own CA (http://stackoverflow.com/a/7770075):
+    config.set(' CA_default ', 'dir', options.ca_dir)
+    config.set(' CA_default ', 'certs', '$dir')
+    config.set(' CA_default ', 'new_certs_dir', '$dir/ca.db.certs')
+    config.set(' CA_default ', 'database', '$dir/ca.db.index')
+    config.set(' CA_default ', 'serial', '$dir/ca.db.serial')
+    config.set(' CA_default ', 'RANDFILE', '$dir/ca.db.rand')
+    config.set(' CA_default ', 'certificate', '$dir/ca.crt')
+    config.set(' CA_default ', 'private_key', '$dir/ca.key')
+    config.set(' CA_default ', 'default_days', '365')
+    config.set(' CA_default ', 'default_crl_days', '30')
+    config.set(' CA_default ', 'default_md', 'md5')
+    config.set(' CA_default ', 'preserve', 'no')
+    config.set(' CA_default ', 'policy', 'policy_anything')
+    # config.add_section(' generic_policy ')
+    # config.set(' generic_policy ', 'countryName', 'optional')
+    # config.set(' generic_policy ', 'stateOrProvinceName', 'optional')
+    # config.set(' generic_policy ', 'localityName', 'optional')
+    # config.set(' generic_policy ', 'organizationName', 'optional')
+    # config.set(' generic_policy ', 'organizationalUnitName', 'optional')
+    # config.set(' generic_policy ', 'commonName', 'supplied')
+    # config.set(' generic_policy ', 'emailAddress', 'optional')
     return config
 
 
@@ -95,7 +130,10 @@ def generate_keys(options):
         'fqdn': hostname,
     }
     run_cmd(["openssl", "genrsa", "-out", key, "3072"])
-    run_cmd([
+    serial_txt = hostname + str(datetime.datetime.now())
+    if not PYTHON2:
+        serial_txt = serial_txt.encode("utf-8")
+    cmd = [
         "openssl", "req",
         "-new",
         "-x509",
@@ -105,8 +143,31 @@ def generate_keys(options):
         "-subj", options.subject % repl_dict,
         "-out", cert,
         "-days", str(options.days),
-    ])
+        '-set_serial', '0x%s' % hashlib.md5(serial_txt).hexdigest(),
+    ]
+#    if options.ca_cert and options.ca_key:
+#        cmd.extend(['-CA', options.ca_cert, '-CAkey', options.ca_key])
+    run_cmd(cmd)
     return key, cert
+
+
+def create_ca_files(options):
+    top_dir = options.ca_dir
+    certs_dir = os.path.join(top_dir, "ca.db.certs")
+    if not os.path.exists(certs_dir):
+        os.makedirs(os.path.join(top_dir, "ca.db.certs"))
+    index = os.path.join(top_dir, "ca.db.index")
+    attr = os.path.join(top_dir, "ca.db.index.attr")
+    serial = os.path.join(top_dir, "ca.db.index.attr")
+    if not os.path.exists(index):
+        with open(index, "w") as fh:
+            print("01", file=fh)
+    if not os.path.exists(attr):
+        with open(attr, "w") as fh:
+            print("unique_subject = no", file=fh)
+    if not os.path.exists(serial):
+        with open(serial, "w") as fh:
+            print("01", file=fh)
 
 
 def parse_args(args):
@@ -122,9 +183,16 @@ def parse_args(args):
                         help='Number of days before expiration')
     parser.add_argument('--newconf', type=str, default="myssl.cnf",
                         help='Path to write generated openssl config')
+    parser.add_argument('--new_ca_conf', type=str, default="CA/ca_ssl.cnf",
+                        help='Path to write generated openssl config')
     parser.add_argument('--openssl-path', type=str, help='Path to openssl.cnf')
     parser.add_argument('--subject', type=str, default=DEFAULT_SUBJECT,
                         help='openssl req subject')
+    parser.add_argument('--ca-dir', type=str,
+                        default=os.path.join(os.path.dirname(__file__), "CA"),
+                        help='CA cert path')
+    parser.add_argument('--ca-cert', type=str, help='CA cert path')
+    parser.add_argument('--ca-key', type=str, help='CA key path')
     return parser.parse_args(args)
 
 
@@ -132,11 +200,24 @@ def main(name=None):
     if name not in (None, '__main__'):
         return
     options = parse_args(sys.argv[1:])
+    if bool(options.ca_cert) != bool(options.ca_key):
+        print("--ca-cert and --ca-key must be specified together!",
+              file=sys.stderr)
+        sys.exit(1)
+#    ca_ssl_conf = generate_new_ssl_conf(
+#        options,
+#        read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS),
+#        ca=True
+#    )
+#    with open(options.new_ca_conf, 'w') as fh:
+#        ca_ssl_conf.write(fh)
     ssl_conf = generate_new_ssl_conf(
+        options,
         read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS)
     )
     with open(options.newconf, 'w') as fh:
         ssl_conf.write(fh)
+    create_ca_files(options)
     key, cert = generate_keys(options)
     print("Private key is at %s.  Public cert is at %s." % (key, cert))
     print("You can inspect the cert via `openssl x509 -text -noout -in %s`"

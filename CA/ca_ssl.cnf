@@ -12,7 +12,7 @@ tsa_policy3 = 1.2.3.4.5.7
 default_ca = CA_default		# The default ca section
 
 [ CA_default ]
-dir = ./CA
+dir = .
 certs = $dir
 crl_dir = $dir/crl		# Where the issued crl are kept
 database = $dir/ca.db.index
@@ -31,7 +31,6 @@ default_crl_days = 30
 default_md = md5
 preserve = no
 policy = policy_anything
-copy_extensions = copy
 
 [ policy_match ]
 countryName = match
@@ -94,7 +93,6 @@ keyUsage = nonRepudiation, digitalSignature, keyEncipherment
 subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid:always,issuer
 basicConstraints = CA:true
-subjectAltName = $ENV::ALTNAME
 
 [ crl_ext ]
 authorityKeyIdentifier = keyid:always
