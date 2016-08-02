@@ -3,8 +3,11 @@
 """ssl.py unit tests
 """
 import argparse
+from contextlib import contextmanager
 import os
 import pytest
+import shutil
+import tempfile
 
 import csrtool
 
@@ -28,6 +31,13 @@ class Aggregator(object):
 
 def noop(*args, **kwargs):
     assert args or kwargs or True
+
+
+@contextmanager
+def temp_dir():
+    tmpdir = tempfile.mkdtemp()
+    yield tmpdir
+    shutil.rmtree(tmpdir)
 
 
 @pytest.fixture(scope='function')
@@ -84,3 +94,16 @@ def test_runner(agg):
 @pytest.mark.parametrize("params", ALTNAME_PARAMS)
 def test_build_altname(params):
     assert csrtool.build_altname(params[0], params[1]) == params[2]
+
+
+# create_ca_files {{{1
+def test_create_ca_files():
+    options = argparse.Namespace()
+    with temp_dir() as tmp:
+        options.ca_dir = tmp
+        csrtool.create_ca_files(options)
+        assert os.path.exists(os.path.join(tmp, "ca.db.index"))
+        assert os.path.isdir(os.path.join(tmp, "ca.db.certs"))
+        with open(os.path.join(tmp, "ca.db.serial"), "r") as fh:
+            serial = fh.read().rstrip()
+        assert serial == "01"
