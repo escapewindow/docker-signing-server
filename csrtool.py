@@ -8,10 +8,10 @@ This requires openssl installed locally.
 
 Example usage:
 
-./ssl.py gen_ca --ca-pass
-./ssl.py gen_csr --fqdn localhost localhost.localdomain --ip 127.0.0.1
-./ssl.py sign_csr --ca-pass --fqdn localhost localhost.localdomain --ip 127.0.0.1
-./ssl.py ecdh_cert --fqdn localhost
+./csrtool.py gen_ca --ca-pass
+./csrtool.py gen_csr --fqdn localhost localhost.localdomain --ip 127.0.0.1
+./csrtool.py sign_csr --ca-pass --fqdn localhost localhost.localdomain --ip 127.0.0.1
+./csrtool.py ecdh_cert --fqdn localhost
 
 Based off of:
 * http://stackoverflow.com/a/21494483
@@ -56,7 +56,6 @@ DEFAULT_SUBJECT = os.environ.get(
 ACTIONS = ("gen_ca", "gen_csr", "sign_csr", "ecdh_cert")
 
 log = logging.getLogger(__name__)
-
 
 
 # generate_new_ssl_conf {{{1
@@ -152,7 +151,6 @@ def create_ca_files(options):
     properly.
     """
     top_dir = options.ca_dir
-    certs_dir = os.path.join(top_dir, "ca.db.certs")
     os.makedirs(os.path.join(top_dir, "ca.db.certs"))
     index = os.path.join(top_dir, "ca.db.index")
     attr = os.path.join(top_dir, "ca.db.index.attr")
@@ -347,7 +345,8 @@ def parse_args(args):
                         help='Number of days before CA cert expiration')
     parser.add_argument('--newconf', type=str, default="myssl.cnf",
                         help='Path to write generated openssl config')
-    parser.add_argument('--new_ca_conf', type=str, default="%(ca_dir)s/ca_ssl.cnf",
+    parser.add_argument('--new_ca_conf', type=str,
+                        default="%(ca_dir)s/ca_ssl.cnf",
                         help='Path to write generated openssl config')
     parser.add_argument('--openssl-path', type=str, help='Path to openssl.cnf')
     parser.add_argument('--subject', type=str, default=DEFAULT_SUBJECT,

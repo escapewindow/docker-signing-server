@@ -6,6 +6,9 @@ nonce
 *.log
 CA/
 fake_ca/
+.cache
+.tox
+*.egg-info
 
 # ssl
 *.cert

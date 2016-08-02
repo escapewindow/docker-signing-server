@@ -1,10 +1,18 @@
 .git
 .gitignore
+.tox
+tox.ini
+setup.py
+MANIFEST.in
+*.egg-info
+*.swp
+.cache
 
 TODO
 README.md
 
 sign.py
+csrtool.py
 gpg.sh
 ssl*
 CA*
