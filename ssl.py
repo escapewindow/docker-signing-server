@@ -16,6 +16,7 @@ from __future__ import print_function
 import argparse
 import datetime
 import hashlib
+import logging
 import os
 import subprocess
 import sys
@@ -37,6 +38,10 @@ SSL_DIR = os.path.join(os.path.dirname(__file__), 'ssl')
 DEFAULT_SUBJECT = os.environ.get(
     "SSL_SUBJECT", "/C=US/ST=CA/L=San Francisco/O=Moco Releng/CN=%(fqdn)s"
 )
+ACTIONS = ("gen_ca", "gen_csr", "sign_csr")
+
+log = logging.getLogger(__name__)
+
 
 
 def generate_new_ssl_conf(options, orig_config_string, ca=False):
@@ -54,7 +59,7 @@ def generate_new_ssl_conf(options, orig_config_string, ca=False):
                     "[ default ]\n{}".format(orig_config_string)
     config.read_string(config_string)
 
-    # print(config.sections())
+    log.debug(config.sections())
 
     # The section names barf without the spaces =\
     # Changes for subjectAltName:
@@ -94,8 +99,8 @@ def read_orig_ssl_conf(path, search_paths):
 def run_cmd(cmd):
     """Run a command.
     """
-    print("Running %s ..." % cmd)
-    print("Copy/paste: %s" % subprocess.list2cmdline(cmd))
+    log.info("Running %s ..." % cmd)
+    log.info("Copy/paste: %s" % subprocess.list2cmdline(cmd))
     subprocess.check_call(cmd)
 
 
@@ -108,14 +113,14 @@ def build_altname(fqdns, ips):
     return ','.join(altname)
 
 
-def generate_keys(options):
-    """Generate the key and cert.
+def generate_csr(options):
+    """Generate the key and csr.
     """
     hostname = options.fqdn[0]
     key = os.path.join(SSL_DIR, "%s.key" % hostname)
     cert = os.path.join(SSL_DIR, "%s.cert" % hostname)
     os.environ['ALTNAME'] = build_altname(options.fqdn, options.ips)
-    print("Using ALTNAME of '%s' ..." % os.environ['ALTNAME'])
+    log.info("Using ALTNAME of '%s' ..." % os.environ['ALTNAME'])
     for path in (key, cert):
         if os.path.exists(path):
             os.remove(path)
@@ -138,16 +143,51 @@ def generate_keys(options):
         "-days", str(options.days),
         '-set_serial', '0x%s' % hashlib.md5(serial_txt).hexdigest(),
     ]
-#    if options.ca_cert and options.ca_key:
-#        cmd.extend(['-CA', options.ca_cert, '-CAkey', options.ca_key])
     run_cmd(cmd)
     return key, cert
+
+
+def create_ca_files(options):
+    top_dir = options.ca_dir
+    certs_dir = os.path.join(top_dir, "ca.db.certs")
+    if not os.path.exists(certs_dir):
+        os.makedirs(os.path.join(top_dir, "ca.db.certs"))
+    index = os.path.join(top_dir, "ca.db.index")
+    attr = os.path.join(top_dir, "ca.db.index.attr")
+    serial = os.path.join(top_dir, "ca.db.serial")
+    if not os.path.exists(index):
+        with open(index, "w") as fh:
+            pass
+    if not os.path.exists(attr):
+        with open(attr, "w") as fh:
+            print("unique_subject = no", file=fh)
+    if not os.path.exists(serial):
+        with open(serial, "w") as fh:
+            print("01", file=fh)
+
+
+def generate_ca(options):
+    # We need a non-ALTNAME ssl conf to generate a CA.
+    if os.path.exists(options.ca_dir):
+        log.critical("%s exists! Move it away or delete it before generating CA!")
+        sys.exit(1)
+    create_ca_files(options)
+    ca_ssl_conf = generate_new_ssl_conf(
+        options,
+        read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS),
+        ca=True
+    )
+    with open(options.new_ca_conf, 'w') as fh:
+        ca_ssl_conf.write(fh)
 
 
 def parse_args(args):
     parser = argparse.ArgumentParser(
         description='Generate self-signed SSL cert for a host.'
     )
+    parser.add_argument('actions', metavar='ACTION', choices=ACTIONS,
+                        nargs='+',
+                        help='Actions to run.  Choose from %s.' % (ACTIONS, ))
     parser.add_argument('--fqdn', metavar='fqdn', type=str, nargs='+',
                         required=True,
                         help='FQDN(s) for the SSL server (first is primary)')
@@ -163,10 +203,11 @@ def parse_args(args):
     parser.add_argument('--subject', type=str, default=DEFAULT_SUBJECT,
                         help='openssl req subject')
     parser.add_argument('--ca-dir', type=str,
-                        default=os.path.join(os.path.dirname(__file__), "CA"),
+                        default=os.path.abspath(
+                            os.path.join(os.path.dirname(__file__), "CA")
+                        ),
                         help='CA cert path')
-    parser.add_argument('--ca-cert', type=str, help='CA cert path')
-    parser.add_argument('--ca-key', type=str, help='CA key path')
+    parser.add_argument('--verbose', '-v', type=bool, help='Verbose logging')
     return parser.parse_args(args)
 
 
@@ -174,29 +215,34 @@ def main(name=None):
     if name not in (None, '__main__'):
         return
     options = parse_args(sys.argv[1:])
-    if bool(options.ca_cert) != bool(options.ca_key):
-        print("--ca-cert and --ca-key must be specified together!",
-              file=sys.stderr)
+    if options.verbose:
+        log.setLevel(logging.DEBUG)
+    if len(log.handlers) == 0:
+        log.addHandler(logging.StreamHandler())
+    log.addHandler(logging.NullHandler())
+    if "gen_ca" in options.actions:
+        log.info("Generating new CA...")
+        generate_ca(options)
+    if "gen_csr" in options.actions or "sign_csr" in options.actions:
+        log.info("Generating new ssl config...")
+        ssl_conf = generate_new_ssl_conf(
+            options,
+            read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS)
+        )
+        with open(options.newconf, 'w') as fh:
+            ssl_conf.write(fh)
+    if "gen_csr" in options.actions:
+        log.info("Generating new CSR...")
+        key, cert = generate_csr(options)
+        log.info("Private key is at %s.  CSR is at %s." % (key, cert))
+    if "sign_csr" in options.actions:
+        log.info("Signing CSR...")
+        log.warning("Not written yet.")
+        # TODO
         sys.exit(1)
-    # We need a non-ALTNAME ssl conf to generate a CA.
-    ca_ssl_conf = generate_new_ssl_conf(
-        options,
-        read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS),
-        ca=True
-    )
-    with open(options.new_ca_conf, 'w') as fh:
-        ca_ssl_conf.write(fh)
-    ssl_conf = generate_new_ssl_conf(
-        options,
-        read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS)
-    )
-    with open(options.newconf, 'w') as fh:
-        ssl_conf.write(fh)
-    key, cert = generate_keys(options)
-    print("Private key is at %s.  Public cert is at %s." % (key, cert))
-    print("You can inspect the cert via `openssl x509 -text -noout -in %s`"
-          % cert)
-    print("Done.")
+        log.info("You can inspect the cert via `openssl x509 -text -noout -in %s`"
+              % cert)
+    log.warning("Done.")
 
 
 main(name=__name__)
