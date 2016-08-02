@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Generate a new self-signed private key + public cert for an ssl server.
 
-This will contain a CommonName and subjectAltName for newer python ssl
+This will contain a `CommonName` and `subjectAltName` for newer python ssl
 verification.
 
 This requires openssl installed locally.
@@ -10,12 +10,18 @@ Example usage:
 
 ./ssl.py gen_ca --ca-pass
 ./ssl.py gen_csr --fqdn localhost localhost.localdomain --ip 127.0.0.1
+./ssl.py sign_csr --ca-pass --fqdn localhost localhost.localdomain --ip 127.0.0.1
+./ssl.py ecdh_cert --fqdn localhost
 
 Based off of:
 * http://stackoverflow.com/a/21494483
 * https://gist.github.com/toolness/3073310
 * https://gist.github.com/irazasyed/15885b27963d146061d7
 * http://stackoverflow.com/a/7770075
+
+An error message of `failed to update database` during `sign_csr` may indicate
+the subject has been reused, which may be a no-no in production.  In dev,
+you can edit CA/ca.db.index.attr to set `unique_subject = no`
 """
 from __future__ import print_function
 import argparse
@@ -26,6 +32,7 @@ import logging
 import os
 import subprocess
 import sys
+import tempfile
 
 if sys.version_info[0] == 2:
     from ConfigParser import RawConfigParser
@@ -44,7 +51,7 @@ SSL_DIR = os.path.join(os.path.dirname(__file__), 'ssl')
 DEFAULT_SUBJECT = os.environ.get(
     "SSL_SUBJECT", "/C=US/ST=CA/L=San Francisco/O=Moco Releng/CN=%(fqdn)s"
 )
-ACTIONS = ("gen_ca", "gen_csr", "sign_csr")
+ACTIONS = ("gen_ca", "gen_csr", "sign_csr", "ecdh_cert")
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +71,13 @@ def generate_new_ssl_conf(options, orig_config_string, ca=False):
     # add [default] section at the top to keep configparser from barfing
     config_string = "# Modified per http://stackoverflow.com/a/21494483\n" + \
                     "[ default ]\n{}".format(orig_config_string)
-    config.read_string(config_string)
+    if PYTHON2:
+        with tempfile.TemporaryFile() as fh:
+            fh.write(config_string)
+            fh.seek(0)
+            config.readfp(fh)
+    else:
+        config.read_string(config_string)
 
     log.debug(config.sections())
 
@@ -103,7 +116,7 @@ def read_orig_ssl_conf(path, search_paths):
         raise Exception("Can't find openssl.cnf in %s!" % search_paths)
 
 
-# helper functions {{{1
+# run_cmd {{{1
 def run_cmd(cmd, silence=()):
     """Run a command.
     """
@@ -118,6 +131,7 @@ def run_cmd(cmd, silence=()):
     subprocess.check_call(cmd)
 
 
+# build_altname {{{1
 def build_altname(fqdns, ips):
     altname = []
     for num, val in enumerate(fqdns, start=1):
@@ -134,50 +148,94 @@ def generate_csr(options):
     log.info("Generating new CSR...")
     hostname = options.fqdn[0]
     key = os.path.join(SSL_DIR, "%s.key" % hostname)
-    cert = os.path.join(SSL_DIR, "%s.cert" % hostname)
+    csr = os.path.join(SSL_DIR, "%s.csr" % hostname)
     os.environ['ALTNAME'] = build_altname(options.fqdn, options.ips)
     log.info("Using ALTNAME of '%s' ..." % os.environ['ALTNAME'])
-    for path in (key, cert):
+    for path in (key, csr):
         if os.path.exists(path):
             os.remove(path)
     repl_dict = {
         'fqdn': hostname,
     }
-    run_cmd(["openssl", "genrsa", "-out", key, "3072"])
+    run_cmd(["openssl", "genrsa", "-out", key, "4096"])
     serial_txt = hostname + str(datetime.datetime.now())
     if not PYTHON2:
         serial_txt = serial_txt.encode("utf-8")
     cmd = [
         "openssl", "req",
         "-new",
-        "-x509",
         "-config", options.newconf,
         "-key", key,
         "-%s" % options.hashalg,
         "-subj", options.subject % repl_dict,
-        "-out", cert,
+        "-out", csr,
         "-days", options.days,
         '-set_serial', '0x%s' % hashlib.md5(serial_txt).hexdigest(),
     ]
     run_cmd(cmd)
-    log.info("Private key is at %s.  CSR is at %s." % (key, cert))
-    return key, cert
+    log.info("Private key is at %s.  CSR is at %s." % (key, csr))
+    return key, csr
 
 
+# sign_csr {{{1
 def sign_csr(options):
     """Sign the CSR with the CA key
     """
     log.info("Signing CSR...")
     hostname = options.fqdn[0]
     csr_path = options.csr_path % {'fqdn': hostname}
-
-    cert = ""  # TODO
+    cert = os.path.join(SSL_DIR, "%s.cert" % hostname)
+    os.environ['ALTNAME'] = build_altname(options.fqdn, options.ips)
+    log.info("Using ALTNAME of '%s' ..." % os.environ['ALTNAME'])
+    silence = None
+    cmd = [
+        "openssl", "ca",
+        "-batch",
+        "-verbose",
+        "-config", options.newconf,
+        "-extensions", "v3_ca",
+        "-out", cert,
+        "-keyfile", os.path.join(options.ca_dir, "ca.key"),
+    ]
+    if options.ca_pass:
+        pass_arg = "pass:%s" % options.ca_pass
+        cmd.extend(["-passin", pass_arg])
+        silence = (pass_arg, )
+    cmd.extend(["-infiles", csr_path])
+    run_cmd(cmd, silence=silence)
     log.info("Cert is at %s" % cert)
     log.info("You can inspect the cert via `openssl x509 -text -noout -in %s`"
              % cert)
 
 
-# generate_ca and create_ca_files {{{1
+# ecdh_cert {{{1
+def ecdh_cert(options):
+    """Add DH and ECDH parameters to cert
+    """
+    hostname = options.fqdn[0]
+    cert = os.path.join(SSL_DIR, "%s.cert" % hostname)
+    log.info("Adding DH and ECDH parameters to %s..." % cert)
+    dhpath = os.path.join(SSL_DIR, "%s.dhparam" % hostname)
+    ecpath = os.path.join(SSL_DIR, "%s.ecparam" % hostname)
+    log.info(
+        "Generating Diffie-Hellman file for secure SSL/TLS negotiation...")
+    cmd = ["openssl", "dhparam", "4096", "-out", dhpath]
+    run_cmd(cmd)
+    log.info("Generating EC curve parameters...")
+    cmd = ["openssl", "ecparam", "-name", "secp384r1", "-out", ecpath]
+    run_cmd(cmd)
+    log.info("Concatenating DH and ECDH parameters to certificate...")
+    with open(cert, "a") as fh:
+        for path in (dhpath, ecpath):
+            with open(path, "r") as from_:
+                for line in from_.readline():
+                    print(line, file=fh, end='')
+    log.info("Updated cert is at %s" % cert)
+    log.info("You can inspect the cert via `openssl x509 -text -noout -in %s`"
+             % cert)
+
+
+# create_ca_files {{{1
 def create_ca_files(options):
     """Create the files the CA needs.  These may be named/laid out differently
     based on the openssl.cnf used...  It would be awesome to be able to read
@@ -201,6 +259,7 @@ def create_ca_files(options):
         print("01", file=fh)
 
 
+# generate_ca {{{1
 def generate_ca(options):
     """Create a new self-signed CA to sign CSRs with.
     ca.key+password should be super private; ca.crt is public and can be used
@@ -305,8 +364,9 @@ def parse_args(args):
     )
     parser.add_argument('--verbose', '-v', type=bool, help='Verbose logging')
     options = parser.parse_args(args)
-    if ("gen_csr" in options.actions or "sign_csr" in options.actions) and \
-            not options.fqdn:
+    if not options.fqdn and set(
+        ["gen_csr", "sign_csr", "ecdh_cert"]
+    ).intersection(set(options.actions)):
         messages.append("--fqdn required when running gen_csr or sign_csr!")
     if messages:
         log.error(messages)
@@ -341,7 +401,9 @@ def main(name=None):
     if "gen_csr" in options.actions:
         generate_csr(options)
     if "sign_csr" in options.actions:
-        cert = sign_csr(options)
+        sign_csr(options)
+    if "ecdh_cert" in options.actions:
+        ecdh_cert(options)
     log.warning("Done.")
 
 
