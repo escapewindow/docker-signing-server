@@ -282,7 +282,7 @@ def generate_ca(options):
         read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS),
         ca=True
     )
-    with open(options.new_ca_conf, 'w') as fh:
+    with open(options.new_ca_conf % {'ca_dir': options.ca_dir}, 'w') as fh:
         ca_ssl_conf.write(fh)
     cmd = [
         "openssl", "genrsa",
@@ -344,7 +344,7 @@ def parse_args(args):
                         help='Number of days before CA cert expiration')
     parser.add_argument('--newconf', type=str, default="myssl.cnf",
                         help='Path to write generated openssl config')
-    parser.add_argument('--new_ca_conf', type=str, default="CA/ca_ssl.cnf",
+    parser.add_argument('--new_ca_conf', type=str, default="%(ca_dir)s/ca_ssl.cnf",
                         help='Path to write generated openssl config')
     parser.add_argument('--openssl-path', type=str, help='Path to openssl.cnf')
     parser.add_argument('--subject', type=str, default=DEFAULT_SUBJECT,
@@ -387,7 +387,10 @@ def main(name=None):
         log.addHandler(logging.StreamHandler())
     log.addHandler(logging.NullHandler())
     if options.ca_pass:
-        options.ca_pass = getpass(prompt="CA Password: ")
+        prompt = "CA Password: "
+        if "gen_ca" in options.actions:
+            prompt = "New CA Password: "
+        options.ca_pass = getpass(prompt=prompt)
     if "gen_ca" in options.actions:
         generate_ca(options)
     if "gen_csr" in options.actions or "sign_csr" in options.actions:

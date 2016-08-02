@@ -8,6 +8,7 @@ sign.py
 gpg.sh
 ssl*
 CA*
+fake_ca
 
 token
 nonce

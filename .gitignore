@@ -5,6 +5,7 @@ nonce
 *.asc
 *.log
 CA/
+fake_ca/
 
 # ssl
 *.cert
