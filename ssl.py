@@ -119,8 +119,8 @@ def read_orig_ssl_conf(path, search_paths):
         raise Exception("Can't find openssl.cnf in %s!" % search_paths)
 
 
-# run_cmd {{{1
-def run_cmd(cmd, silence=()):
+# runner {{{1
+def runner(cmd, silence=()):
     """Run a command.
     """
     log_cmd = []
@@ -169,7 +169,7 @@ def create_ca_files(options):
 
 
 # generate_ca {{{1
-def generate_ca(options):
+def generate_ca(options, run_cmd=runner):
     """Create a new self-signed CA to sign CSRs with.
     ca.key+password should be super private; ca.crt is public and can be used
     to verify ca-signed certs.
@@ -235,7 +235,7 @@ def generate_ca(options):
 
 
 # generate_csr {{{1
-def generate_csr(options):
+def generate_csr(options, run_cmd=runner):
     """Generate the key and csr.
     """
     log.info("Generating new CSR...")
@@ -271,7 +271,7 @@ def generate_csr(options):
 
 
 # sign_csr {{{1
-def sign_csr(options):
+def sign_csr(options, run_cmd=runner):
     """Sign the CSR with the CA key
     """
     log.info("Signing CSR...")
@@ -302,7 +302,7 @@ def sign_csr(options):
 
 
 # ecdh_cert {{{1
-def ecdh_cert(options):
+def ecdh_cert(options, run_cmd=runner):
     """Add DH and ECDH parameters to cert
     """
     hostname = options.fqdn[0]
