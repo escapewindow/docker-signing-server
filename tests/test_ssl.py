@@ -9,11 +9,35 @@ import pytest
 import csrtool
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+SSL_CNF = os.path.join(DATA_DIR, "ssl.cnf")
+
+# params {{{1
+ALTNAME_PARAMS = (
+    (('fqdn1', 'fqdn2'), ('ip1', ), "DNS.1:fqdn1,DNS.2:fqdn2,IP.1:ip1"),
+    (('host1', 'host2'), (), "DNS.1:host1,DNS.2:host2"),
+)
+
+
+# helpers {{{1
+class Aggregator(object):
+    msgs = []
+
+    def append(self, *args, **kwargs):
+        self.msgs.append([args, kwargs])
+
+
+def noop(*args, **kwargs):
+    assert args or kwargs or True
+
+
+@pytest.fixture(scope='function')
+def agg():
+    return Aggregator()
 
 
 @pytest.fixture(scope='function')
 def fake_ssl_conf():
-    with open(os.path.join(DATA_DIR, "ssl.cnf"), "r") as fh:
+    with open(SSL_CNF, "r") as fh:
         return fh.read()
 
 
@@ -38,10 +62,25 @@ def test_generate_new_ssl_conf_ca(fake_ssl_conf):
 
 # read_orig_ssl_conf {{{1
 def test_read_orig_ssl_conf(fake_ssl_conf):
-    val = csrtool.read_orig_ssl_conf(os.path.join(DATA_DIR, "ssl.cnf"), [])
+    val = csrtool.read_orig_ssl_conf(SSL_CNF, [])
     assert val == fake_ssl_conf
 
 
 def test_missing_orig_ssl_conf(fake_ssl_conf):
     with pytest.raises(Exception):
         csrtool.read_orig_ssl_conf(None, ["x"])
+
+
+# runner {{{1
+def test_runner(agg):
+    cmd = ['asdf', 'blah', 'secret']
+    silence = {'secret': 'notsecret'}
+    csrtool.runner(cmd, silence=silence, log_fn=agg.append, call=noop)
+    assert "['asdf', 'blah', 'notsecret']" in agg.msgs[0][0][0]
+    assert "asdf blah notsecret" in agg.msgs[1][0][0]
+
+
+# build_altname {{{1
+@pytest.mark.parametrize("params", ALTNAME_PARAMS)
+def test_build_altname(params):
+    assert csrtool.build_altname(params[0], params[1]) == params[2]
