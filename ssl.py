@@ -99,11 +99,17 @@ def read_orig_ssl_conf(path, search_paths):
 
 
 # helper functions {{{1
-def run_cmd(cmd):
+def run_cmd(cmd, silence=()):
     """Run a command.
     """
-    log.info("Running %s ..." % cmd)
-    log.info("Copy/paste: %s" % subprocess.list2cmdline(cmd))
+    log_cmd = []
+    for item in cmd:
+        if item in silence:
+            log_cmd.append("********")
+        else:
+            log_cmd.append(item)
+    log.info("Running %s ..." % log_cmd)
+    log.info("Copy/paste: %s" % subprocess.list2cmdline(log_cmd))
     subprocess.check_call(cmd)
 
 
@@ -203,10 +209,13 @@ def generate_ca(options):
         "-des3",
         "-out", os.path.join(options.ca_dir, "ca.key"),
     ]
+    silence = ()
     if options.ca_pass:
-        cmd.extend(["-passout", "pass:%s" % options.ca_pass])
+        pass_arg = "pass:%s" % options.ca_pass
+        cmd.extend(["-passout", pass_arg])
+        silence = (pass_arg, )
     cmd.extend(["4096"])
-    run_cmd(cmd)
+    run_cmd(cmd, silence=silence)
     cmd = [
         "openssl", "req",
         "-verbose",
@@ -217,11 +226,11 @@ def generate_ca(options):
         "-subj", options.subject % {'fqdn': options.ca_domain},
     ]
     if options.ca_pass:
-        cmd.extend(["-passin", "pass:%s" % options.ca_pass])
-    run_cmd(cmd)
+        cmd.extend(["-passin", pass_arg])
+    run_cmd(cmd, silence=silence)
     cmd = ["openssl", "ca"]
     if options.ca_pass:
-        cmd.extend(["-batch", "-passin", "pass:%s" % options.ca_pass])
+        cmd.extend(["-batch", "-passin", pass_arg])
     cmd.extend([
         "-config", os.path.join(options.ca_dir, "ca_ssl.cnf"),
         "-extensions", "v3_ca",
@@ -233,7 +242,7 @@ def generate_ca(options):
         "-days", options.ca_days,
         "-infiles", os.path.join(options.ca_dir, "ca.csr"),
     ])
-    run_cmd(cmd)
+    run_cmd(cmd, silence=silence)
 
 
 # parse_args {{{1
@@ -270,7 +279,7 @@ def parse_args(args):
     parser.add_argument('--hashalg', type=str, default="sha256",
                         help='Hash algorithm to use')
     parser.add_argument('--ca-pass', action='store_true',
-                        help='Prompt for CA password')
+                        help='Only prompt for CA password once')
     parser.add_argument('--verbose', '-v', type=bool, help='Verbose logging')
     options = parser.parse_args(args)
     if ("gen_csr" in options.actions or "sign_csr" in options.actions) and \
