@@ -12,7 +12,7 @@ tsa_policy3 = 1.2.3.4.5.7
 default_ca = CA_default		# The default ca section
 
 [ CA_default ]
-dir = /Users/asasaki/wrk/signingserver/CA
+dir = ./CA
 certs = $dir
 crl_dir = $dir/crl		# Where the issued crl are kept
 database = $dir/ca.db.index
