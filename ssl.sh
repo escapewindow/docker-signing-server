@@ -8,7 +8,7 @@ cp ssl/localhost.key host.key
 cat <<EOF
 You can now launch the docker signing server, and use fake_ca/ca.crt to verify the cert.
 
-To enhance security, run the following (but it will take a while):
+To enhance security, run the following (but it will take a few minutes):
     ./ssl.py ecdh_cert --ca-pass --fqdn localhost localhost.localdomain --ip 127.0.0.1
     cp ssl/localhost.cert host.cert
 EOF
