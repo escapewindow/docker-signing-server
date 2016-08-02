@@ -5,7 +5,7 @@ from setuptools import setup
 deps = []
 
 setup(
-    name="csrtool",
+    name="csrtool.py",
     version="0.1.0",
     description="Generate and sign CSRs",
     author="Release Engineers",
