@@ -23,6 +23,7 @@ An error message of `failed to update database` during `sign_csr` may indicate
 the subject has been reused, which may be a no-no in production.  In dev,
 you can edit CA/ca.db.index.attr to set `unique_subject = no`
 """
+# imports {{{1
 from __future__ import print_function
 import argparse
 import datetime
@@ -41,6 +42,7 @@ else:
     from configparser import RawConfigParser
     PYTHON2 = False
 
+# constants {{{1
 SSL_CONFIG_PATHS = (
     "/usr/local/etc/openssl/openssl.cnf",
     "/usr/local/ssl/openssl.cnf",
@@ -103,6 +105,7 @@ def generate_new_ssl_conf(options, orig_config_string, ca=False):
     return config
 
 
+# read_orig_ssl_conf {{{1
 def read_orig_ssl_conf(path, search_paths):
     """Find openssl.cnf and return its contents as a string
     """
@@ -139,6 +142,96 @@ def build_altname(fqdns, ips):
     for num, val in enumerate(ips or [], start=1):
         altname.append("IP.%d:%s" % (num, val))
     return ','.join(altname)
+
+
+# create_ca_files {{{1
+def create_ca_files(options):
+    """Create the files the CA needs.  These may be named/laid out differently
+    based on the openssl.cnf used...  It would be awesome to be able to read
+    an existing openssl.cnf and generate on the fly, but also hard to do
+    properly.
+    """
+    top_dir = options.ca_dir
+    certs_dir = os.path.join(top_dir, "ca.db.certs")
+    os.makedirs(os.path.join(top_dir, "ca.db.certs"))
+    index = os.path.join(top_dir, "ca.db.index")
+    attr = os.path.join(top_dir, "ca.db.index.attr")
+    serial = os.path.join(top_dir, "ca.db.serial")
+    with open(index, "w") as fh:
+        pass
+    with open(attr, "w") as fh:
+        # By default this seems to require a unique subject per cert;
+        # uncomment the below to get around that
+        # print("unique_subject = no", file=fh)
+        pass
+    with open(serial, "w") as fh:
+        print("01", file=fh)
+
+
+# generate_ca {{{1
+def generate_ca(options):
+    """Create a new self-signed CA to sign CSRs with.
+    ca.key+password should be super private; ca.crt is public and can be used
+    to verify ca-signed certs.
+    """
+    log.info("Generating new CA in %s..." % options.ca_dir)
+    # I could overwrite or move away; for now, let's force the user to nuke
+    # or move
+    if os.path.exists(options.ca_dir):
+        log.critical(
+            "%s exists! Move it away or delete it before generating CA!"
+            % options.ca_dir
+        )
+        sys.exit(1)
+    # These files are needed to use the CA
+    create_ca_files(options)
+    # We need a non-ALTNAME ssl conf to generate a CA.
+    ca_ssl_conf = generate_new_ssl_conf(
+        options,
+        read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS),
+        ca=True
+    )
+    with open(options.new_ca_conf % {'ca_dir': options.ca_dir}, 'w') as fh:
+        ca_ssl_conf.write(fh)
+    cmd = [
+        "openssl", "genrsa",
+        "-des3",
+        "-out", os.path.join(options.ca_dir, "ca.key"),
+    ]
+    silence = ()
+    if options.ca_pass:
+        pass_arg = "pass:%s" % options.ca_pass
+        cmd.extend(["-passout", pass_arg])
+        silence = (pass_arg, )
+    cmd.extend(["4096"])
+    run_cmd(cmd, silence=silence)
+    cmd = [
+        "openssl", "req",
+        "-verbose",
+        "-new",
+        "-key", os.path.join(options.ca_dir, "ca.key"),
+        "-out", os.path.join(options.ca_dir, "ca.csr"),
+        "-%s" % options.hashalg,
+        "-subj", options.subject % {'fqdn': options.ca_domain},
+    ]
+    if options.ca_pass:
+        cmd.extend(["-passin", pass_arg])
+    run_cmd(cmd, silence=silence)
+    cmd = ["openssl", "ca"]
+    if options.ca_pass:
+        cmd.extend(["-batch", "-passin", pass_arg])
+    cmd.extend([
+        "-config", os.path.join(options.ca_dir, "ca_ssl.cnf"),
+        "-extensions", "v3_ca",
+        "-out", os.path.join(options.ca_dir, "ca.crt"),
+        "-keyfile", os.path.join(options.ca_dir, "ca.key"),
+        "-verbose",
+        "-selfsign",
+        "-md", options.hashalg,
+        "-days", options.ca_days,
+        "-infiles", os.path.join(options.ca_dir, "ca.csr"),
+    ])
+    run_cmd(cmd, silence=silence)
 
 
 # generate_csr {{{1
@@ -233,96 +326,6 @@ def ecdh_cert(options):
     log.info("Updated cert is at %s" % cert)
     log.info("You can inspect the cert via `openssl x509 -text -noout -in %s`"
              % cert)
-
-
-# create_ca_files {{{1
-def create_ca_files(options):
-    """Create the files the CA needs.  These may be named/laid out differently
-    based on the openssl.cnf used...  It would be awesome to be able to read
-    an existing openssl.cnf and generate on the fly, but also hard to do
-    properly.
-    """
-    top_dir = options.ca_dir
-    certs_dir = os.path.join(top_dir, "ca.db.certs")
-    os.makedirs(os.path.join(top_dir, "ca.db.certs"))
-    index = os.path.join(top_dir, "ca.db.index")
-    attr = os.path.join(top_dir, "ca.db.index.attr")
-    serial = os.path.join(top_dir, "ca.db.serial")
-    with open(index, "w") as fh:
-        pass
-    with open(attr, "w") as fh:
-        # By default this seems to require a unique subject per cert;
-        # uncomment the below to get around that
-        # print("unique_subject = no", file=fh)
-        pass
-    with open(serial, "w") as fh:
-        print("01", file=fh)
-
-
-# generate_ca {{{1
-def generate_ca(options):
-    """Create a new self-signed CA to sign CSRs with.
-    ca.key+password should be super private; ca.crt is public and can be used
-    to verify ca-signed certs.
-    """
-    log.info("Generating new CA in %s..." % options.ca_dir)
-    # I could overwrite or move away; for now, let's force the user to nuke
-    # or move
-    if os.path.exists(options.ca_dir):
-        log.critical(
-            "%s exists! Move it away or delete it before generating CA!"
-            % options.ca_dir
-        )
-        sys.exit(1)
-    # These files are needed to use the CA
-    create_ca_files(options)
-    # We need a non-ALTNAME ssl conf to generate a CA.
-    ca_ssl_conf = generate_new_ssl_conf(
-        options,
-        read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS),
-        ca=True
-    )
-    with open(options.new_ca_conf % {'ca_dir': options.ca_dir}, 'w') as fh:
-        ca_ssl_conf.write(fh)
-    cmd = [
-        "openssl", "genrsa",
-        "-des3",
-        "-out", os.path.join(options.ca_dir, "ca.key"),
-    ]
-    silence = ()
-    if options.ca_pass:
-        pass_arg = "pass:%s" % options.ca_pass
-        cmd.extend(["-passout", pass_arg])
-        silence = (pass_arg, )
-    cmd.extend(["4096"])
-    run_cmd(cmd, silence=silence)
-    cmd = [
-        "openssl", "req",
-        "-verbose",
-        "-new",
-        "-key", os.path.join(options.ca_dir, "ca.key"),
-        "-out", os.path.join(options.ca_dir, "ca.csr"),
-        "-%s" % options.hashalg,
-        "-subj", options.subject % {'fqdn': options.ca_domain},
-    ]
-    if options.ca_pass:
-        cmd.extend(["-passin", pass_arg])
-    run_cmd(cmd, silence=silence)
-    cmd = ["openssl", "ca"]
-    if options.ca_pass:
-        cmd.extend(["-batch", "-passin", pass_arg])
-    cmd.extend([
-        "-config", os.path.join(options.ca_dir, "ca_ssl.cnf"),
-        "-extensions", "v3_ca",
-        "-out", os.path.join(options.ca_dir, "ca.crt"),
-        "-keyfile", os.path.join(options.ca_dir, "ca.key"),
-        "-verbose",
-        "-selfsign",
-        "-md", options.hashalg,
-        "-days", options.ca_days,
-        "-infiles", os.path.join(options.ca_dir, "ca.csr"),
-    ])
-    run_cmd(cmd, silence=silence)
 
 
 # parse_args {{{1
