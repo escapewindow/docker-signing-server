@@ -6,6 +6,11 @@ verification.
 
 This requires openssl installed locally.
 
+Example usage:
+
+./ssl.py gen_ca --ca-pass
+./ssl.py gen_csr --fqdn localhost localhost.localdomain --ip 127.0.0.1
+
 Based off of:
 * http://stackoverflow.com/a/21494483
 * https://gist.github.com/toolness/3073310
@@ -126,6 +131,7 @@ def build_altname(fqdns, ips):
 def generate_csr(options):
     """Generate the key and csr.
     """
+    log.info("Generating new CSR...")
     hostname = options.fqdn[0]
     key = os.path.join(SSL_DIR, "%s.key" % hostname)
     cert = os.path.join(SSL_DIR, "%s.cert" % hostname)
@@ -154,7 +160,21 @@ def generate_csr(options):
         '-set_serial', '0x%s' % hashlib.md5(serial_txt).hexdigest(),
     ]
     run_cmd(cmd)
+    log.info("Private key is at %s.  CSR is at %s." % (key, cert))
     return key, cert
+
+
+def sign_csr(options):
+    """Sign the CSR with the CA key
+    """
+    log.info("Signing CSR...")
+    hostname = options.fqdn[0]
+    csr_path = options.csr_path % {'fqdn': hostname}
+
+    cert = ""  # TODO
+    log.info("Cert is at %s" % cert)
+    log.info("You can inspect the cert via `openssl x509 -text -noout -in %s`"
+             % cert)
 
 
 # generate_ca and create_ca_files {{{1
@@ -186,6 +206,7 @@ def generate_ca(options):
     ca.key+password should be super private; ca.crt is public and can be used
     to verify ca-signed certs.
     """
+    log.info("Generating new CA in %s..." % options.ca_dir)
     # I could overwrite or move away; for now, let's force the user to nuke
     # or move
     if os.path.exists(options.ca_dir):
@@ -270,9 +291,7 @@ def parse_args(args):
     parser.add_argument('--subject', type=str, default=DEFAULT_SUBJECT,
                         help='openssl req subject')
     parser.add_argument('--ca-dir', type=str,
-                        default=os.path.abspath(
-                            os.path.join(os.path.dirname(__file__), "CA")
-                        ),
+                        default=os.path.join(os.path.dirname(__file__), "CA"),
                         help='CA cert path')
     parser.add_argument('--ca-domain', type=str, default="mozilla.com",
                         help='CA domain')
@@ -280,6 +299,10 @@ def parse_args(args):
                         help='Hash algorithm to use')
     parser.add_argument('--ca-pass', action='store_true',
                         help='Only prompt for CA password once')
+    parser.add_argument(
+        '--csr-path', type=str, help='CSR path, for sign_csr',
+        default=os.path.join(SSL_DIR, "%(fqdn)s.csr")
+    )
     parser.add_argument('--verbose', '-v', type=bool, help='Verbose logging')
     options = parser.parse_args(args)
     if ("gen_csr" in options.actions or "sign_csr" in options.actions) and \
@@ -306,10 +329,9 @@ def main(name=None):
     if options.ca_pass:
         options.ca_pass = getpass(prompt="CA Password: ")
     if "gen_ca" in options.actions:
-        log.info("Generating new CA...")
         generate_ca(options)
     if "gen_csr" in options.actions or "sign_csr" in options.actions:
-        log.info("Generating new ssl config...")
+        log.info("Generating new ssl config at %s ..." % options.newconf)
         ssl_conf = generate_new_ssl_conf(
             options,
             read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS)
@@ -317,16 +339,9 @@ def main(name=None):
         with open(options.newconf, 'w') as fh:
             ssl_conf.write(fh)
     if "gen_csr" in options.actions:
-        log.info("Generating new CSR...")
-        key, cert = generate_csr(options)
-        log.info("Private key is at %s.  CSR is at %s." % (key, cert))
+        generate_csr(options)
     if "sign_csr" in options.actions:
-        log.info("Signing CSR...")
-        log.warning("Not written yet.")
-        # TODO
-        sys.exit(1)
-        log.info("You can inspect the cert via `openssl x509 -text -noout -in %s`"
-              % cert)
+        cert = sign_csr(options)
     log.warning("Done.")
 
 
