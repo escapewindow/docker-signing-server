@@ -119,18 +119,19 @@ def read_orig_ssl_conf(path, search_paths):
 
 
 # runner {{{1
-def runner(cmd, silence=()):
+def runner(cmd, silence=None, log_fn=log.info, call=subprocess.check_call):
     """Run a command.
     """
+    silence = silence or {}
     log_cmd = []
     for item in cmd:
         if item in silence:
-            log_cmd.append("********")
+            log_cmd.append(silence.get(item, '********'))
         else:
             log_cmd.append(item)
-    log.info("Running %s ..." % log_cmd)
-    log.info("Copy/paste: %s" % subprocess.list2cmdline(log_cmd))
-    subprocess.check_call(cmd)
+    log_fn("Running %s ..." % log_cmd)
+    log_fn("Copy/paste: %s" % subprocess.list2cmdline(log_cmd))
+    call(cmd)
 
 
 # build_altname {{{1
@@ -196,11 +197,11 @@ def generate_ca(options, run_cmd=runner):
         "-des3",
         "-out", os.path.join(options.ca_dir, "ca.key"),
     ]
-    silence = ()
+    silence = {}
     if options.ca_pass:
         pass_arg = "pass:%s" % options.ca_pass
         cmd.extend(["-passout", pass_arg])
-        silence = (pass_arg, )
+        silence[pass_arg] = "pass:********"
     cmd.extend(["4096"])
     run_cmd(cmd, silence=silence)
     cmd = [
@@ -278,7 +279,7 @@ def sign_csr(options, run_cmd=runner):
     cert = os.path.join(SSL_DIR, "%s.cert" % hostname)
     os.environ['ALTNAME'] = build_altname(options.fqdn, options.ips)
     log.info("Using ALTNAME of '%s' ..." % os.environ['ALTNAME'])
-    silence = None
+    silence = {}
     cmd = [
         "openssl", "ca",
         "-batch",
@@ -291,7 +292,7 @@ def sign_csr(options, run_cmd=runner):
     if options.ca_pass:
         pass_arg = "pass:%s" % options.ca_pass
         cmd.extend(["-passin", pass_arg])
-        silence = (pass_arg, )
+        silence[pass_arg] = "pass:********"
     cmd.extend(["-infiles", csr_path])
     run_cmd(cmd, silence=silence)
     log.info("Cert is at %s" % cert)
