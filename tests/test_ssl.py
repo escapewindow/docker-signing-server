@@ -107,3 +107,17 @@ def test_create_ca_files():
         with open(os.path.join(tmp, "ca.db.serial"), "r") as fh:
             serial = fh.read().rstrip()
         assert serial == "01"
+
+
+# parse_args {{{1
+def test_parse_args():
+    args = ['gen_ca', 'sign_csr', '--fqdn', 'fqdn']
+    options = csrtool.parse_args(args)
+    assert options.actions == ['gen_ca', 'sign_csr']
+    assert options.fqdn == ['fqdn']
+
+
+def test_parse_bad_args():
+    args = ['gen_ca', 'sign_csr']
+    with pytest.raises(SystemExit):
+        csrtool.parse_args(args)
