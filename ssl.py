@@ -228,8 +228,8 @@ def ecdh_cert(options):
     with open(cert, "a") as fh:
         for path in (dhpath, ecpath):
             with open(path, "r") as from_:
-                for line in from_.readline():
-                    print(line, file=fh, end='')
+                contents = from_.read()
+            print(contents, file=fh, end='')
     log.info("Updated cert is at %s" % cert)
     log.info("You can inspect the cert via `openssl x509 -text -noout -in %s`"
              % cert)
