@@ -44,6 +44,7 @@ log = logging.getLogger(__name__)
 
 
 
+# generate_new_ssl_conf {{{1
 def generate_new_ssl_conf(options, orig_config_string, ca=False):
     """Take the original openssl.conf contents, make it readable to
     RawConfigParser, then edit it to allow for self-signed subjectAltName
@@ -96,6 +97,7 @@ def read_orig_ssl_conf(path, search_paths):
         raise Exception("Can't find openssl.cnf in %s!" % search_paths)
 
 
+# helper functions {{{1
 def run_cmd(cmd):
     """Run a command.
     """
@@ -113,6 +115,7 @@ def build_altname(fqdns, ips):
     return ','.join(altname)
 
 
+# generate_csr {{{1
 def generate_csr(options):
     """Generate the key and csr.
     """
@@ -137,39 +140,40 @@ def generate_csr(options):
         "-x509",
         "-config", options.newconf,
         "-key", key,
-        "-sha256",
+        "-%s" % options.hashalg,
         "-subj", options.subject % repl_dict,
         "-out", cert,
-        "-days", str(options.days),
+        "-days", options.days,
         '-set_serial', '0x%s' % hashlib.md5(serial_txt).hexdigest(),
     ]
     run_cmd(cmd)
     return key, cert
 
 
+# generate_ca and create_ca_files {{{1
 def create_ca_files(options):
     top_dir = options.ca_dir
     certs_dir = os.path.join(top_dir, "ca.db.certs")
-    if not os.path.exists(certs_dir):
-        os.makedirs(os.path.join(top_dir, "ca.db.certs"))
+    os.makedirs(os.path.join(top_dir, "ca.db.certs"))
     index = os.path.join(top_dir, "ca.db.index")
     attr = os.path.join(top_dir, "ca.db.index.attr")
     serial = os.path.join(top_dir, "ca.db.serial")
-    if not os.path.exists(index):
-        with open(index, "w") as fh:
-            pass
-    if not os.path.exists(attr):
-        with open(attr, "w") as fh:
-            print("unique_subject = no", file=fh)
-    if not os.path.exists(serial):
-        with open(serial, "w") as fh:
-            print("01", file=fh)
+    with open(index, "w") as fh:
+        pass
+    with open(attr, "w") as fh:
+        # print("unique_subject = no", file=fh)
+        pass
+    with open(serial, "w") as fh:
+        print("01", file=fh)
 
 
 def generate_ca(options):
     # We need a non-ALTNAME ssl conf to generate a CA.
     if os.path.exists(options.ca_dir):
-        log.critical("%s exists! Move it away or delete it before generating CA!")
+        log.critical(
+            "%s exists! Move it away or delete it before generating CA!"
+            % options.ca_dir
+        )
         sys.exit(1)
     create_ca_files(options)
     ca_ssl_conf = generate_new_ssl_conf(
@@ -179,21 +183,52 @@ def generate_ca(options):
     )
     with open(options.new_ca_conf, 'w') as fh:
         ca_ssl_conf.write(fh)
+    run_cmd([
+        "openssl", "genrsa",
+        "-des3",
+        "-out", os.path.join(options.ca_dir, "ca.key"),
+        # "-passout", "pass:%s" % options.ca_pass,
+        "4096",
+    ])
+    run_cmd([
+        "openssl", "req",
+        "-verbose",
+        "-new",
+        "-key", os.path.join(options.ca_dir, "ca.key"),
+        # "-passin", "pass:%s" % options.ca_pass,
+        "-out", os.path.join(options.ca_dir, "ca.csr"),
+        "-%s" % options.hashalg,
+        "-subj", options.subject % {'fqdn': options.ca_domain},
+    ])
+    run_cmd([
+        "openssl", "ca",
+        "-config", os.path.join(options.ca_dir, "ca_ssl.cnf"),
+        "-extensions", "v3_ca",
+        "-out", os.path.join(options.ca_dir, "ca.crt"),
+        "-keyfile", os.path.join(options.ca_dir, "ca.key"),
+        "-verbose",
+        "-selfsign",
+        "-md", options.hashalg,
+        "-days", options.days,
+        "-infiles", os.path.join(options.ca_dir, "ca.csr"),
+    ])
 
 
+
+# parse_args {{{1
 def parse_args(args):
+    messages = []
     parser = argparse.ArgumentParser(
         description='Generate self-signed SSL cert for a host.'
     )
     parser.add_argument('actions', metavar='ACTION', choices=ACTIONS,
                         nargs='+',
                         help='Actions to run.  Choose from %s.' % (ACTIONS, ))
-    parser.add_argument('--fqdn', metavar='fqdn', type=str, nargs='+',
-                        required=True,
+    parser.add_argument('--fqdn', metavar='fqdn', type=str, nargs='*',
                         help='FQDN(s) for the SSL server (first is primary)')
     parser.add_argument('--ips', metavar='X.X.X.X', type=str, nargs='+',
                         help='IP address(es) for the SSL server')
-    parser.add_argument('--days', type=int, default=365,
+    parser.add_argument('--days', type=str, default="365",
                         help='Number of days before expiration')
     parser.add_argument('--newconf', type=str, default="myssl.cnf",
                         help='Path to write generated openssl config')
@@ -207,16 +242,30 @@ def parse_args(args):
                             os.path.join(os.path.dirname(__file__), "CA")
                         ),
                         help='CA cert path')
+    parser.add_argument('--ca-domain', type=str, default="mozilla.com",
+                        help='CA domain')
+    parser.add_argument('--hashalg', type=str, default="sha256",
+                        help='Hash algorithm to use')
     parser.add_argument('--verbose', '-v', type=bool, help='Verbose logging')
-    return parser.parse_args(args)
+    options = parser.parse_args(args)
+    if ("gen_csr" in options.actions or "sign_csr" in options.actions) and \
+            not options.fqdn:
+        messages.append("--fqdn required when running gen_csr or sign_csr!")
+    if messages:
+        log.error(messages)
+        sys.exit(1)
+    return options
 
 
+# main {{{1
 def main(name=None):
     if name not in (None, '__main__'):
         return
     options = parse_args(sys.argv[1:])
     if options.verbose:
         log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
     if len(log.handlers) == 0:
         log.addHandler(logging.StreamHandler())
     log.addHandler(logging.NullHandler())
