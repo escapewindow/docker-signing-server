@@ -15,6 +15,7 @@ Based off of:
 from __future__ import print_function
 import argparse
 import datetime
+from getpass import getpass
 import hashlib
 import logging
 import os
@@ -152,6 +153,11 @@ def generate_csr(options):
 
 # generate_ca and create_ca_files {{{1
 def create_ca_files(options):
+    """Create the files the CA needs.  These may be named/laid out differently
+    based on the openssl.cnf used...  It would be awesome to be able to read
+    an existing openssl.cnf and generate on the fly, but also hard to do
+    properly.
+    """
     top_dir = options.ca_dir
     certs_dir = os.path.join(top_dir, "ca.db.certs")
     os.makedirs(os.path.join(top_dir, "ca.db.certs"))
@@ -161,6 +167,8 @@ def create_ca_files(options):
     with open(index, "w") as fh:
         pass
     with open(attr, "w") as fh:
+        # By default this seems to require a unique subject per cert;
+        # uncomment the below to get around that
         # print("unique_subject = no", file=fh)
         pass
     with open(serial, "w") as fh:
@@ -168,14 +176,21 @@ def create_ca_files(options):
 
 
 def generate_ca(options):
-    # We need a non-ALTNAME ssl conf to generate a CA.
+    """Create a new self-signed CA to sign CSRs with.
+    ca.key+password should be super private; ca.crt is public and can be used
+    to verify ca-signed certs.
+    """
+    # I could overwrite or move away; for now, let's force the user to nuke
+    # or move
     if os.path.exists(options.ca_dir):
         log.critical(
             "%s exists! Move it away or delete it before generating CA!"
             % options.ca_dir
         )
         sys.exit(1)
+    # These files are needed to use the CA
     create_ca_files(options)
+    # We need a non-ALTNAME ssl conf to generate a CA.
     ca_ssl_conf = generate_new_ssl_conf(
         options,
         read_orig_ssl_conf(options.openssl_path, SSL_CONFIG_PATHS),
@@ -183,25 +198,31 @@ def generate_ca(options):
     )
     with open(options.new_ca_conf, 'w') as fh:
         ca_ssl_conf.write(fh)
-    run_cmd([
+    cmd = [
         "openssl", "genrsa",
         "-des3",
         "-out", os.path.join(options.ca_dir, "ca.key"),
-        # "-passout", "pass:%s" % options.ca_pass,
-        "4096",
-    ])
-    run_cmd([
+    ]
+    if options.ca_pass:
+        cmd.extend(["-passout", "pass:%s" % options.ca_pass])
+    cmd.extend(["4096"])
+    run_cmd(cmd)
+    cmd = [
         "openssl", "req",
         "-verbose",
         "-new",
         "-key", os.path.join(options.ca_dir, "ca.key"),
-        # "-passin", "pass:%s" % options.ca_pass,
         "-out", os.path.join(options.ca_dir, "ca.csr"),
         "-%s" % options.hashalg,
         "-subj", options.subject % {'fqdn': options.ca_domain},
-    ])
-    run_cmd([
-        "openssl", "ca",
+    ]
+    if options.ca_pass:
+        cmd.extend(["-passin", "pass:%s" % options.ca_pass])
+    run_cmd(cmd)
+    cmd = ["openssl", "ca"]
+    if options.ca_pass:
+        cmd.extend(["-batch", "-passin", "pass:%s" % options.ca_pass])
+    cmd.extend([
         "-config", os.path.join(options.ca_dir, "ca_ssl.cnf"),
         "-extensions", "v3_ca",
         "-out", os.path.join(options.ca_dir, "ca.crt"),
@@ -209,10 +230,10 @@ def generate_ca(options):
         "-verbose",
         "-selfsign",
         "-md", options.hashalg,
-        "-days", options.days,
+        "-days", options.ca_days,
         "-infiles", os.path.join(options.ca_dir, "ca.csr"),
     ])
-
+    run_cmd(cmd)
 
 
 # parse_args {{{1
@@ -229,7 +250,9 @@ def parse_args(args):
     parser.add_argument('--ips', metavar='X.X.X.X', type=str, nargs='+',
                         help='IP address(es) for the SSL server')
     parser.add_argument('--days', type=str, default="365",
-                        help='Number of days before expiration')
+                        help='Number of days before SSL cert expiration')
+    parser.add_argument('--ca-days', type=str, default="3650",
+                        help='Number of days before CA cert expiration')
     parser.add_argument('--newconf', type=str, default="myssl.cnf",
                         help='Path to write generated openssl config')
     parser.add_argument('--new_ca_conf', type=str, default="CA/ca_ssl.cnf",
@@ -246,6 +269,8 @@ def parse_args(args):
                         help='CA domain')
     parser.add_argument('--hashalg', type=str, default="sha256",
                         help='Hash algorithm to use')
+    parser.add_argument('--ca-pass', action='store_true',
+                        help='Prompt for CA password')
     parser.add_argument('--verbose', '-v', type=bool, help='Verbose logging')
     options = parser.parse_args(args)
     if ("gen_csr" in options.actions or "sign_csr" in options.actions) and \
@@ -269,6 +294,8 @@ def main(name=None):
     if len(log.handlers) == 0:
         log.addHandler(logging.StreamHandler())
     log.addHandler(logging.NullHandler())
+    if options.ca_pass:
+        options.ca_pass = getpass(prompt="CA Password: ")
     if "gen_ca" in options.actions:
         log.info("Generating new CA...")
         generate_ca(options)
