@@ -18,6 +18,8 @@ Based off of:
 * https://gist.github.com/toolness/3073310
 * https://gist.github.com/irazasyed/15885b27963d146061d7
 * http://stackoverflow.com/a/7770075
+* http://www.wikihow.com/Be-Your-Own-Certificate-Authority
+* http://grahamc.com/blog/openssl-madness-how-to-create-keys-certificate-signing-requests-authorities-and-pem-files/
 
 An error message of `failed to update database` during `sign_csr` may indicate
 the subject has been reused, which may be a no-no in production.  In dev,
