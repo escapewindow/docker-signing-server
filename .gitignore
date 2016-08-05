@@ -9,6 +9,7 @@ fake_ca/
 .cache
 .tox
 *.egg-info
+*.tmp
 
 # ssl
 *.cert
