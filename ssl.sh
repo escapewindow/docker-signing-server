@@ -1,5 +1,4 @@
 #!/bin/sh -ex
-echo "This will take a while! If you want it to be faster, you can remove 'ecdh_cert' from the following line..."
 rm -rf fake_ca
 ./csrtool.py gen_ca gen_csr sign_csr --ca-dir fake_ca --ca-pass --fqdn localhost localhost.localdomain --ip 127.0.0.1
 cp ssl/localhost.cert host.cert
