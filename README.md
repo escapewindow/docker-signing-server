@@ -11,7 +11,7 @@ Usage:
 # Generate ssl certs
 ./ssl.sh
 # build docker image and run. this example is interactive
-(cd docker; docker build -t signingserver .); docker run -i -p 9110:9110 signingserver bash -il)
+docker build -t signingserver docker/.; docker run -i -p 9110:9110 signingserver bash -il
 ./run.sh
 # In the docker terminal, you can tail signing.log to debug
 # In a separate terminal, figure out how to set `my_ip`:
