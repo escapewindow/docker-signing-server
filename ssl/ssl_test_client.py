@@ -6,11 +6,16 @@ from __future__ import print_function
 
 import aiohttp
 import asyncio
+import os
 import requests
 import ssl
 
 URL = "https://localhost:8080/?foo=bar"
-SSL_CERT = "localhost.cert"
+SSL_CERT = os.path.join(
+    os.path.dirname(__file__),
+    "..",
+    "fake_ca", "ca.crt"
+)
 ssl_context = ssl.create_default_context(cafile=SSL_CERT)
 
 def req():
