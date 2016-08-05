@@ -1,7 +1,7 @@
 #!/bin/sh -ex
 PASS="qwerqwer"
 SUBJ="/C=US/ST=confusion/L=Springfield/O=Bikeshed/CN=Mozilla Fake CA"
-tmpdir=authenticode.tmp
+tmpdir=signcode.tmp
 
 rm -rf "$tmpdir"
 mkdir -p "$tmpdir"
@@ -15,4 +15,4 @@ openssl rsa -passin pass:$PASS -passout pass:$PASS -in MozAuthenticode.key -outf
 openssl crl2pkcs7 -nocrl -certfile MozAuthenticode.pem -outform DER -out MozAuthenticode.spc
 
 popd
-echo "Done.  Now you can copy $tmpdir/MozAuthenticode.spc and $tmpdir/MozAuthenticode.pvk into docker/authenticode/"
+echo "Done.  Now you can copy $tmpdir/MozAuthenticode.spc and $tmpdir/MozAuthenticode.pvk into docker/signcode/"

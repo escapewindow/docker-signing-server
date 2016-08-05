@@ -39,11 +39,13 @@ RUN signing1/bin/pip install -r requirements.txt
 
 WORKDIR /builds/signing/signing1
 RUN hg clone -r SIGNING_SERVER https://hg.mozilla.org/build/tools
-RUN mkdir -p /builds/signing/signed-files /builds/signing/unsigned-files /builds/signing/signing1/secrets/gpg
+RUN mkdir -p /builds/signing/signed-files /builds/signing/unsigned-files /builds/signing/signing1/secrets/gpg /builds/signing/signing1/secrets/signcode /builds/signing/signing1/secrets/sha2signcode
 COPY *.ini /builds/signing/signing1/
 COPY run.sh /builds/signing/signing1/
 COPY host.* /builds/signing/signing1/
 COPY gpg/* /builds/signing/signing1/secrets/gpg/
+COPY signcode/* /builds/signing/signing1/secrets/signcode/
+COPY signcode/* /builds/signing/signing1/secrets/sha2signcode/
 
 RUN chown -R dockersign:dockersign /builds/signing
 RUN chmod 0700 /builds/signing
