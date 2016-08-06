@@ -46,6 +46,7 @@ COPY host.* /builds/signing/signing1/
 COPY gpg/* /builds/signing/signing1/secrets/gpg/
 COPY signcode/* /builds/signing/signing1/secrets/signcode/
 COPY signcode/* /builds/signing/signing1/secrets/sha2signcode/
+COPY jar /builds/signing/signing1/jar
 
 RUN chown -R dockersign:dockersign /builds/signing
 RUN chmod 0700 /builds/signing
