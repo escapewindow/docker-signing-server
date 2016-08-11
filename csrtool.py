@@ -58,6 +58,7 @@ DEFAULT_SUBJECT = os.environ.get(
 ACTIONS = ("gen_ca", "gen_csr", "sign_csr", "ecdh_cert")
 
 log = logging.getLogger(__name__)
+log.addHandler(logging.StreamHandler())
 
 
 # generate_new_ssl_conf {{{1
@@ -388,9 +389,6 @@ def main(name=None):
         log.setLevel(logging.DEBUG)
     else:
         log.setLevel(logging.INFO)
-    if len(log.handlers) == 0:
-        log.addHandler(logging.StreamHandler())
-    log.addHandler(logging.NullHandler())
     if options.ca_pass:
         prompt = "CA Password: "
         if "gen_ca" in options.actions:
