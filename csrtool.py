@@ -58,7 +58,6 @@ DEFAULT_SUBJECT = os.environ.get(
 ACTIONS = ("gen_ca", "gen_csr", "sign_csr", "ecdh_cert")
 
 log = logging.getLogger(__name__)
-log.addHandler(logging.StreamHandler())
 
 
 # generate_new_ssl_conf {{{1
@@ -384,6 +383,9 @@ def parse_args(args):
 def main(name=None):
     if name not in (None, '__main__'):
         return
+    if len(log.handlers) == 0:
+        log.addHandler(logging.StreamHandler())
+    log.addHandler(logging.NullHandler())
     options = parse_args(sys.argv[1:])
     if options.verbose:
         log.setLevel(logging.DEBUG)
