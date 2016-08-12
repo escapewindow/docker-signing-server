@@ -24,11 +24,12 @@ RUN useradd -d /home/dockersign -s /bin/bash -m dockersign
 
 RUN mkdir /rpms
 WORKDIR /rpms
-RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/releng/public/CentOS/6/x86_64/signmar-19.0-2.el6.x86_64.rpm
-RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/custom/osslsigncode/x86_64/osslsigncode-1.7.1-1.el6.x86_64.rpm
-RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/releng/public/CentOS/6/x86_64/mozilla-python27-2.7.3-1.el6.x86_64.rpm
-RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/releng/public/CentOS/6/x86_64/mozilla-python27-virtualenv-1.7.1.2-2.el6.x86_64.rpm
-RUN wget http://puppetagain.pub.build.mozilla.org/data/repos/yum/releng/public/CentOS/6/noarch/mozilla-signing-test-files-1.2-1.noarch.rpm
+# puppetagain.pub.build.mozilla.org load balancer ip; hardcoded because no external dns
+RUN wget http://63.245.215.68/data/repos/yum/releng/public/CentOS/6/x86_64/signmar-19.0-2.el6.x86_64.rpm
+RUN wget http://63.245.215.68/data/repos/yum/custom/osslsigncode/x86_64/osslsigncode-1.7.1-1.el6.x86_64.rpm
+RUN wget http://63.245.215.68/data/repos/yum/releng/public/CentOS/6/x86_64/mozilla-python27-2.7.3-1.el6.x86_64.rpm
+RUN wget http://63.245.215.68/data/repos/yum/releng/public/CentOS/6/x86_64/mozilla-python27-virtualenv-1.7.1.2-2.el6.x86_64.rpm
+RUN wget http://63.245.215.68/data/repos/yum/releng/public/CentOS/6/noarch/mozilla-signing-test-files-1.2-1.noarch.rpm
 RUN rpm -i --force *.rpm
 
 RUN mkdir -p /builds/signing
