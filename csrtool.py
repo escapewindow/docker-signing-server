@@ -383,14 +383,14 @@ def parse_args(args):
 def main(name=None):
     if name not in (None, '__main__'):
         return
+    if len(log.handlers) == 0:
+        log.addHandler(logging.StreamHandler())
+    log.addHandler(logging.NullHandler())
     options = parse_args(sys.argv[1:])
     if options.verbose:
         log.setLevel(logging.DEBUG)
     else:
         log.setLevel(logging.INFO)
-    if len(log.handlers) == 0:
-        log.addHandler(logging.StreamHandler())
-    log.addHandler(logging.NullHandler())
     if options.ca_pass:
         prompt = "CA Password: "
         if "gen_ca" in options.actions:
