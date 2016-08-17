@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Generate a new self-signed private key + public cert for an ssl server.
+Written against homebrew OpenSSL 1.0.2h_1 on osx 10.11.6
 
 This will contain a `CommonName` and `subjectAltName` for newer python ssl
 verification.
