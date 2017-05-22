@@ -3,7 +3,7 @@ docker-signing-server
 
 An attempt to create a dep signing server container for testing/development (currently gpg and jar/apk only)
 
-The gpg and jar keys are throwaway; don't trust it anywhere :)
+The gpg and jar keys are throwaway; don't trust them anywhere :)
 
 Usage:
 
