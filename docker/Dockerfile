@@ -17,19 +17,21 @@ RUN yum -y update && yum -y install \
     openssl \
     tcl-devel \
     tk-devel \
+    unzip \\
     wget \\
+    zip \\
     && yum -y clean all
 
-RUN useradd -d /home/dockersign -s /bin/bash -m dockersign
+RUN useradd -d /home/cltsign -s /bin/bash -m cltsign
 
 RUN mkdir /rpms
 WORKDIR /rpms
-# puppetagain.pub.build.mozilla.org load balancer ip; hardcoded because no external dns
-RUN wget http://63.245.215.68/data/repos/yum/releng/public/CentOS/6/x86_64/signmar-19.0-2.el6.x86_64.rpm
-RUN wget http://63.245.215.68/data/repos/yum/custom/osslsigncode/x86_64/osslsigncode-1.7.1-1.el6.x86_64.rpm
-RUN wget http://63.245.215.68/data/repos/yum/releng/public/CentOS/6/x86_64/mozilla-python27-2.7.3-1.el6.x86_64.rpm
-RUN wget http://63.245.215.68/data/repos/yum/releng/public/CentOS/6/x86_64/mozilla-python27-virtualenv-1.7.1.2-2.el6.x86_64.rpm
-RUN wget http://63.245.215.68/data/repos/yum/releng/public/CentOS/6/noarch/mozilla-signing-test-files-1.2-1.noarch.rpm
+# releng-puppet2, since puppetagain.pub.build.mozilla.org seems unreachable. Requires VPN
+RUN wget http://10.26.48.50/repos/yum/releng/public/CentOS/6/x86_64/signmar-19.0-2.el6.x86_64.rpm
+RUN wget http://10.26.48.50/repos/yum/custom/osslsigncode/x86_64/osslsigncode-1.7.1-1.el6.x86_64.rpm
+RUN wget http://10.26.48.50/repos/yum/releng/public/CentOS/6/x86_64/mozilla-python27-2.7.3-1.el6.x86_64.rpm
+RUN wget http://10.26.48.50/repos/yum/releng/public/CentOS/6/x86_64/mozilla-python27-virtualenv-1.7.1.2-2.el6.x86_64.rpm
+RUN wget http://10.26.48.50/repos/yum/releng/public/CentOS/6/noarch/mozilla-signing-test-files-1.2-1.noarch.rpm
 RUN rpm -i --force *.rpm
 
 RUN mkdir -p /builds/signing
@@ -47,16 +49,17 @@ COPY *.ini /builds/signing/signing1/
 COPY run.sh /builds/signing/signing1/
 COPY host.* /builds/signing/signing1/
 COPY gpg/* /builds/signing/signing1/secrets/gpg/
+COPY jar/* /builds/signing/signing1/secrets/jar
 
-RUN chown -R dockersign:dockersign /builds/signing
+RUN chown -R cltsign:cltsign /builds/signing
 RUN chmod 0700 /builds/signing
 
 WORKDIR /builds/signing/signing1
 
-ENV           HOME          /home/dockersign
+ENV           HOME          /home/cltsign
 ENV           SHELL         /bin/bash
-ENV           USER          dockersign
-ENV           LOGNAME       dockersign
+ENV           USER          cltsign
+ENV           LOGNAME       cltsign
 
 EXPOSE 9110
 

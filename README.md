@@ -11,7 +11,7 @@ Usage:
 # Generate ssl certs
 ./ssl.sh
 # build docker image and run interactively.
-docker build -t signingserver docker/. && docker run -i -p 9110:9110 signingserver bash -il
+docker build -t signingserver docker/. && docker run -i -p 9110:9110 --user cltsign signingserver bash -il
 # in the docker shell, launch the signing server.  This will exit quickly, after
 # running the signing server in the background.
 ./run.sh
