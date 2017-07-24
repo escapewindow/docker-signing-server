@@ -48,12 +48,13 @@ WORKDIR /builds/signing/signing1
 #RUN hg clone -r SIGNING_SERVER https://hg.mozilla.org/build/tools
 RUN mkdir -p /builds/signing/signing1/tools
 COPY tools /builds/signing/signing1/tools/
-RUN mkdir -p /builds/signing/signed-files /builds/signing/unsigned-files /builds/signing/signing1/secrets/gpg
+RUN mkdir -p /builds/signing/signed-files /builds/signing/unsigned-files /builds/signing/signing1/secrets/{cdm,gpg,jar}
 COPY *.ini /builds/signing/signing1/
 COPY run.sh /builds/signing/signing1/
 COPY host.* /builds/signing/signing1/
+COPY cdm/* /builds/signing/signing1/secrets/cdm/
 COPY gpg/* /builds/signing/signing1/secrets/gpg/
-COPY jar/* /builds/signing/signing1/secrets/jar
+COPY jar/* /builds/signing/signing1/secrets/jar/
 
 RUN chown -R cltsign:cltsign /builds/signing
 RUN chmod 0700 /builds/signing
