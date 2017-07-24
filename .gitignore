@@ -20,3 +20,6 @@ fake_ca/
 *.pem
 *.dhparam
 *.ecparam
+
+cdm_signer.py
+cdm_checker.py

@@ -9,12 +9,16 @@ RUN yum -y update && yum -y install \
     libevent \
     libevent-devel \
     java-1.6.0-openjdk-devel \
+    libffi-devel \
     make \
     mercurial \
     mono-core \
     mono-devel \
     nss-tools \
     openssl \
+    openssl-devel \
+    python-devel \
+    redhat-rpm-config \
     tcl-devel \
     tk-devel \
     unzip \\
@@ -41,9 +45,9 @@ RUN /tools/python27/bin/python /tools/python27-virtualenv/bin/virtualenv signing
 RUN signing1/bin/pip install -r requirements.txt
 
 WORKDIR /builds/signing/signing1
-RUN hg clone -r SIGNING_SERVER https://hg.mozilla.org/build/tools
-#RUN mkdir -p /builds/signing/signing1/tools
-#COPY tools /builds/signing/signing1/tools/
+#RUN hg clone -r SIGNING_SERVER https://hg.mozilla.org/build/tools
+RUN mkdir -p /builds/signing/signing1/tools
+COPY tools /builds/signing/signing1/tools/
 RUN mkdir -p /builds/signing/signed-files /builds/signing/unsigned-files /builds/signing/signing1/secrets/gpg
 COPY *.ini /builds/signing/signing1/
 COPY run.sh /builds/signing/signing1/
