@@ -21,5 +21,6 @@ fake_ca/
 *.dhparam
 *.ecparam
 
-cdm_signer.py
-cdm_checker.py
+widevine_signer.py
+widevine_checker.py
+docker/tools
