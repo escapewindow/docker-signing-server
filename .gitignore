@@ -12,6 +12,7 @@ fake_ca/
 
 # ssl
 *.cert
+*.der
 *.crt
 *.csr
 *.key
