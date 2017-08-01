@@ -56,6 +56,7 @@ RUN mkdir -p /builds/signing/signed-files \
 COPY *.ini /builds/signing/signing1/
 COPY run.sh /builds/signing/signing1/
 COPY host.* /builds/signing/signing1/
+RUN chmod go-rwx /builds/signing/signing1/host.*
 COPY widevine/* /builds/signing/signing1/secrets/widevine/
 COPY gpg/* /builds/signing/signing1/secrets/gpg/
 COPY jar/* /builds/signing/signing1/secrets/jar/
